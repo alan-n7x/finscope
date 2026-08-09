@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Finscope — Controle Financeiro Pessoal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23"></line>
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </div>
+        <div>
+          <h1>Finscope</h1>
+          <p class="subtitle">Controle Financeiro Conectado ao OneDrive</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="sync-badge" title="Planilha sincronizada via OneDrive">
+          <span class="pulse-dot"></span>
+          <span>OneDrive Sincronizado</span>
+        </div>
+        <button id="btn-open-modal" class="btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Novo Lançamento
+        </button>
+      </div>
+    </header>
+
+    <!-- KPI Metric Cards Grid -->
+    <section class="kpi-grid">
+      <div class="kpi-card glass-panel">
+        <div class="kpi-header">
+          <span>Saldo Total em Conta</span>
+          <div class="kpi-icon balance-icon">💰</div>
+        </div>
+        <div id="kpi-total-balance" class="kpi-value">R$ 0,00</div>
+        <div class="kpi-footer">Soma dos saldos bancários</div>
+      </div>
+
+      <div class="kpi-card glass-panel">
+        <div class="kpi-header">
+          <span>Receitas do Mês</span>
+          <div class="kpi-icon income-icon">📈</div>
+        </div>
+        <div id="kpi-income" class="kpi-value positive">+R$ 0,00</div>
+        <div id="kpi-income-sub" class="kpi-footer">Entradas em agosto</div>
+      </div>
+
+      <div class="kpi-card glass-panel">
+        <div class="kpi-header">
+          <span>Despesas do Mês</span>
+          <div class="kpi-icon expense-icon">📉</div>
+        </div>
+        <div id="kpi-expense" class="kpi-value negative">-R$ 0,00</div>
+        <div id="kpi-expense-sub" class="kpi-footer">Saídas em agosto</div>
+      </div>
+
+      <div class="kpi-card glass-panel highlight-card">
+        <div class="kpi-header">
+          <span>Livre Após Reserva</span>
+          <div class="kpi-icon free-icon">🛡️</div>
+        </div>
+        <div id="kpi-free" class="kpi-value highlight">R$ 0,00</div>
+        <div id="kpi-free-sub" class="kpi-footer">Descontada reserva de R$ 310</div>
+      </div>
+    </section>
+
+    <!-- Contas Bancárias Grid -->
+    <section class="section-container">
+      <div class="section-header">
+        <h2>Minhas Contas</h2>
+      </div>
+      <div id="accounts-grid" class="accounts-grid">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- Main Content: Transactions & Side Panel -->
+    <div class="main-content-grid">
+      <!-- Section: Extrato / Lançamentos -->
+      <section class="transactions-section glass-panel">
+        <div class="section-header-wrap">
+          <h2>Extrato de Lançamentos</h2>
+          <div class="filters-bar">
+            <div class="search-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input id="input-search" type="text" placeholder="Buscar lançamento..." autocomplete="off">
+            </div>
+
+            <select id="select-month" class="custom-select">
+              <option value="">Todos os Meses</option>
+            </select>
+
+            <select id="select-category" class="custom-select">
+              <option value="">Todas Categorias</option>
+            </select>
+
+            <select id="select-status" class="custom-select">
+              <option value="">Todos Status</option>
+              <option value="sim">Pagos</option>
+              <option value="não">Pendentes</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Tipo</th>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Conta</th>
+                <th>Forma</th>
+                <th>Valor</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="transactions-body">
+              <tr>
+                <td colspan="8" class="loading-cell">Carregando lançamentos...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Sidebar: Dívidas & Compromissos -->
+      <aside class="sidebar-section glass-panel">
+        <div class="section-header">
+          <h2>Dívidas & Compromissos</h2>
+        </div>
+        <div id="debts-list" class="debts-list">
+          <!-- Rendered via JS -->
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Modal: Novo Lançamento Rápido -->
+  <div id="modal-transaction" class="modal-overlay" hidden>
+    <div class="modal-card glass-panel">
+      <div class="modal-header">
+        <h3>Novo Lançamento</h3>
+        <button id="btn-close-modal" class="btn-close">&times;</button>
+      </div>
+      <form id="form-transaction" class="modal-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="form-date">Data</label>
+            <input id="form-date" type="date" required>
+          </div>
+          <div class="form-group">
+            <label for="form-type">Tipo</label>
+            <select id="form-type" class="custom-select" required>
+              <option value="Despesa">Despesa</option>
+              <option value="Receita">Receita</option>
+              <option value="Transferência">Transferência</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="form-desc">Descrição</label>
+          <input id="form-desc" type="text" placeholder="Ex: Supermercado, Aluguel, Pix" required>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="form-amount">Valor (R$)</label>
+            <input id="form-amount" type="number" step="0.01" min="0.01" placeholder="0,00" required>
+          </div>
+          <div class="form-group">
+            <label for="form-category">Categoria</label>
+            <select id="form-category" class="custom-select" required>
+              <!-- Populated via JS -->
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="form-account">Conta</label>
+            <select id="form-account" class="custom-select" required>
+              <!-- Populated via JS -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="form-payment">Forma de Pagamento</label>
+            <select id="form-payment" class="custom-select" required>
+              <!-- Populated via JS -->
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row checkboxes-row">
+          <label class="checkbox-label">
+            <input id="form-paid" type="checkbox" checked>
+            <span>Já foi pago / confirmado?</span>
+          </label>
+          <label class="checkbox-label">
+            <input id="form-essential" type="checkbox">
+            <span>Gasto essencial?</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label for="form-obs">Observação (Opcional)</label>
+          <input id="form-obs" type="text" placeholder="Anotações adicionais...">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btn-cancel-form" class="btn-secondary">Cancelar</button>
+          <button type="submit" id="btn-submit-form" class="btn-primary">Salvar no OneDrive</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
