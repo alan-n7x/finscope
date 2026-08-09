@@ -193,7 +193,7 @@ export const NewTransactionModal: React.FC<NewTransactionModalProps> = ({
             Cancelar
           </Button>
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Salvando...' : 'Salvar no OneDrive'}
+            {isSubmitting ? 'Salvando...' : 'Salvar Lançamento'}
           </Button>
         </div>
       </form>

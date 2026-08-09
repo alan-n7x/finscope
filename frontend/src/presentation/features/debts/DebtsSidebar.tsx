@@ -4,9 +4,10 @@ import { Badge } from '../../components/ui/Badge';
 
 interface DebtsSidebarProps {
   debts: Debt[];
+  fullPage?: boolean;
 }
 
-export const DebtsSidebar: React.FC<DebtsSidebarProps> = ({ debts }) => {
+export const DebtsSidebar: React.FC<DebtsSidebarProps> = ({ debts, fullPage }) => {
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -22,7 +23,7 @@ export const DebtsSidebar: React.FC<DebtsSidebarProps> = ({ debts }) => {
   };
 
   return (
-    <aside className="sidebar-section glass-panel">
+    <aside className={`sidebar-section glass-panel ${fullPage ? 'sidebar-full' : ''}`}>
       <div className="section-header">
         <h2>Dívidas & Compromissos</h2>
       </div>
