@@ -3,6 +3,7 @@ import { useDashboard } from '../../application/hooks/useDashboard';
 import { useTransactions, useFilterOptions, useCreateTransaction } from '../../application/hooks/useTransactions';
 import { KpiCardsGrid } from '../features/dashboard/KpiCardsGrid';
 import { AccountsGrid } from '../features/dashboard/AccountsGrid';
+import { AnalyticsSection } from '../features/analytics/AnalyticsSection';
 import { TransactionTable } from '../features/transactions/TransactionTable';
 import { NewTransactionModal } from '../features/transactions/NewTransactionModal';
 import { DebtsSidebar } from '../features/debts/DebtsSidebar';
@@ -66,6 +67,9 @@ export const DashboardPage: React.FC = () => {
 
       {/* Accounts Grid */}
       <AccountsGrid accounts={dashboardData?.summary?.accounts} />
+
+      {/* Analytics Section (Charts) */}
+      <AnalyticsSection transactions={transactions} summary={dashboardData?.summary} />
 
       {/* Main Content Grid */}
       <div className="main-content-grid">

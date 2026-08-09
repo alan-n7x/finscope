@@ -256,6 +256,99 @@ h1 {
   color: var(--text-main);
 }
 
+/* Analytics Section */
+.analytics-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 20px;
+}
+
+.chart-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chart-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.chart-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.donut-chart-container {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.donut-wrapper {
+  flex: 1;
+  min-width: 180px;
+}
+
+.chart-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+.legend-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend-name {
+  flex: 1;
+  color: var(--text-muted);
+}
+
+.legend-val {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.chart-tooltip {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--border-color);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+  font-size: 0.82rem;
+}
+
+.tooltip-title {
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+
+.tooltip-val {
+  color: var(--primary);
+  font-weight: 600;
+}
+
 /* Main Grid Layout */
 .main-content-grid {
   display: grid;
@@ -265,6 +358,9 @@ h1 {
 
 @media (max-width: 1024px) {
   .main-content-grid {
+    grid-template-columns: 1fr;
+  }
+  .analytics-section {
     grid-template-columns: 1fr;
   }
 }
@@ -394,7 +490,6 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 16px;
-
 }
 
 .debts-list {
