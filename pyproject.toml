@@ -1,0 +1,25 @@
+[project]
+name = "pluggy-mvp"
+version = "0.1.0"
+description = "MVP local para consultar extrato bancário com Pluggy"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "aiosqlite>=0.21.0",
+    "fastapi>=0.116.0",
+    "httpx>=0.28.1",
+    "openpyxl>=3.1.5",
+    "pydantic>=2.11.0",
+    "pydantic-settings>=2.10.0",
+    "uvicorn[standard]>=0.35.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
