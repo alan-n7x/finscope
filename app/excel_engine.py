@@ -1,14 +1,44 @@
 import pathlib
+import os
+import zipfile
 import datetime
 from typing import Any
 import openpyxl
 
 EXCEL_PATH = pathlib.Path(__file__).resolve().parent / "data" / "database.xlsx"
+FALLBACK_ONEDRIVE_PATH = pathlib.Path(r"C:\Users\ndala\OneDrive\Documentos\Financeiro\controle_financeiro.xlsx")
 
 
 def get_excel_path() -> pathlib.Path:
-    """Returns the resolved path of the Excel spreadsheet (following symlinks)."""
-    return EXCEL_PATH.resolve()
+    """Intelligently resolves database.xlsx, handling OS symlinks, Git text pointer files, and OneDrive paths."""
+    p = EXCEL_PATH
+    if p.is_symlink():
+        try:
+            target = pathlib.Path(os.readlink(p))
+            if target.exists():
+                return target.resolve()
+        except Exception:
+            pass
+
+    if p.is_file():
+        # Check if Git stored symlink as a text file pointing to the Excel path
+        try:
+            content = p.read_text(encoding="utf-8", errors="ignore").strip()
+            if content and (content.endswith(".xlsx") or "Financeiro" in content):
+                clean_path = content.replace("\\\\?\\", "").strip()
+                target = pathlib.Path(clean_path)
+                if target.exists():
+                    return target.resolve()
+        except Exception:
+            pass
+
+        if zipfile.is_zipfile(p):
+            return p.resolve()
+
+    if FALLBACK_ONEDRIVE_PATH.exists():
+        return FALLBACK_ONEDRIVE_PATH.resolve()
+
+    return p.resolve()
 
 
 def load_workbook(data_only: bool = True) -> openpyxl.Workbook:
