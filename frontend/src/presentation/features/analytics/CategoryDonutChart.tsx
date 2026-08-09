@@ -46,14 +46,14 @@ export const CategoryDonutChart: React.FC<CategoryDonutChartProps> = ({ data, to
 
       <div className="donut-chart-container">
         <div className="donut-wrapper">
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={260}>
             <PieChart>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={60}
-                outerRadius={85}
+                innerRadius={70}
+                outerRadius={100}
                 paddingAngle={4}
                 dataKey="value"
               >
