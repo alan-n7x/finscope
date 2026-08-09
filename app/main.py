@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -15,16 +16,19 @@ from app.schemas import (
 )
 
 BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
 
 app = FastAPI(title="Finscope — Controle Financeiro", version="0.2.0")
-app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.get("/", include_in_schema=False)
-async def home() -> FileResponse:
-    return FileResponse(BASE_DIR / "static" / "index.html")
-
-
+# API Routes
 @app.get("/health")
 async def health() -> dict[str, str]:
     excel_path = str(excel_engine.get_excel_path())
@@ -74,3 +78,18 @@ async def create_transaction(payload: TransactionCreate) -> dict[str, Any]:
 async def list_debts() -> list[DebtItem]:
     debts = excel_engine.get_debts_summary()
     return [DebtItem(**d) for d in debts]
+
+
+# Frontend Serving (Vite dist if present, else fallback static)
+if FRONTEND_DIST.exists():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_react_app(full_path: str) -> FileResponse:
+        return FileResponse(FRONTEND_DIST / "index.html")
+else:
+    app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+
+    @app.get("/", include_in_schema=False)
+    async def home() -> FileResponse:
+        return FileResponse(BASE_DIR / "static" / "index.html")
