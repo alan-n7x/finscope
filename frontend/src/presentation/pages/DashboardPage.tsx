@@ -8,7 +8,7 @@ import { TransactionTable } from '../features/transactions/TransactionTable';
 import { NewTransactionModal } from '../features/transactions/NewTransactionModal';
 import { DebtsSidebar } from '../features/debts/DebtsSidebar';
 import { Button } from '../components/ui/Button';
-import { Plus, Wallet } from 'lucide-react';
+import { Plus, Wallet, FileSpreadsheet } from 'lucide-react';
 import type { CreateTransactionDTO } from '../../domain/repositories/ITransactionRepository';
 
 export const DashboardPage: React.FC = () => {
@@ -19,7 +19,6 @@ export const DashboardPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Application Hooks (React Query + Use Cases)
   const { data: dashboardData } = useDashboard(selectedMonth);
   const { data: filterOptions } = useFilterOptions();
   const { data: transactions = [], isLoading: isLoadingTx } = useTransactions({
@@ -32,7 +31,7 @@ export const DashboardPage: React.FC = () => {
 
   const handleCreateTransaction = async (dto: CreateTransactionDTO) => {
     await createTxMutation.mutateAsync(dto);
-    setToastMessage('✨ Lançamento gravado no OneDrive com sucesso!');
+    setToastMessage('✅ Lançamento salvo na planilha com sucesso!');
     setTimeout(() => setToastMessage(null), 4000);
   };
 
@@ -42,21 +41,23 @@ export const DashboardPage: React.FC = () => {
       <header className="app-header">
         <div className="brand">
           <div className="logo-icon">
-            <Wallet size={24} />
+            <Wallet size={22} />
           </div>
-          <div>
+          <div className="brand-text">
             <h1>Finscope</h1>
-            <p className="subtitle">Controle Financeiro Conectado ao OneDrive (React + Clean Arch)</p>
+            <p className="subtitle">Controle Financeiro Pessoal</p>
           </div>
         </div>
 
         <div className="header-actions">
-          <div className="sync-badge" title="Planilha sincronizada via OneDrive">
-            <span className="pulse-dot"></span>
-            <span>OneDrive Sincronizado</span>
+          {/* Badge informativo — sem afirmação falsa de OneDrive */}
+          <div className="status-badge" title="Dados lidos da planilha local via API">
+            <span className="status-dot"></span>
+            <FileSpreadsheet size={14} />
+            <span>Planilha Conectada</span>
           </div>
           <Button onClick={() => setIsModalOpen(true)}>
-            <Plus size={18} />
+            <Plus size={16} />
             Novo Lançamento
           </Button>
         </div>
@@ -68,10 +69,10 @@ export const DashboardPage: React.FC = () => {
       {/* Accounts Grid */}
       <AccountsGrid accounts={dashboardData?.summary?.accounts} />
 
-      {/* Analytics Section (Charts) */}
+      {/* Analytics Charts */}
       <AnalyticsSection transactions={transactions} summary={dashboardData?.summary} />
 
-      {/* Main Content Grid */}
+      {/* Transactions + Debts */}
       <div className="main-content-grid">
         <TransactionTable
           transactions={transactions}
@@ -98,7 +99,7 @@ export const DashboardPage: React.FC = () => {
         onSubmit={handleCreateTransaction}
       />
 
-      {/* Toast Notification */}
+      {/* Toast */}
       {toastMessage && <div className="toast">{toastMessage}</div>}
     </div>
   );

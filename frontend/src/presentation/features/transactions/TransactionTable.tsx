@@ -60,41 +60,39 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
             />
           </div>
 
-          <select
-            className="custom-select"
-            value={selectedMonth}
-            onChange={(e) => onMonthChange(e.target.value)}
-          >
-            <option value="">Todos os Meses</option>
-            {filterOptions?.months.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
+          <div className="filters-row">
+            <select
+              className="custom-select"
+              value={selectedMonth}
+              onChange={(e) => onMonthChange(e.target.value)}
+            >
+              <option value="">Todos Meses</option>
+              {filterOptions?.months.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
 
-          <select
-            className="custom-select"
-            value={selectedCategory}
-            onChange={(e) => onCategoryChange(e.target.value)}
-          >
-            <option value="">Todas Categorias</option>
-            {filterOptions?.categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+            <select
+              className="custom-select"
+              value={selectedCategory}
+              onChange={(e) => onCategoryChange(e.target.value)}
+            >
+              <option value="">Categorias</option>
+              {filterOptions?.categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
 
-          <select
-            className="custom-select"
-            value={selectedStatus}
-            onChange={(e) => onStatusChange(e.target.value)}
-          >
-            <option value="">Todos Status</option>
-            <option value="sim">Pagos</option>
-            <option value="não">Pendentes</option>
-          </select>
+            <select
+              className="custom-select"
+              value={selectedStatus}
+              onChange={(e) => onStatusChange(e.target.value)}
+            >
+              <option value="">Status</option>
+              <option value="sim">Pagos</option>
+              <option value="não">Pendentes</option>
+            </select>
+          </div>
         </div>
       </div>
 
