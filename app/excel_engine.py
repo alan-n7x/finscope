@@ -105,7 +105,7 @@ def get_dashboard_summary(month: str | None = None) -> dict[str, Any]:
                 })
                 total_balance += bal_val
 
-    # 2. Month transactions summary (Receitas, Despesas, Saldo do Mês)
+    # 2. Month realized transactions summary (Receitas e Despesas pagas/confirmadas)
     income_month = 0.0
     expense_month = 0.0
     
@@ -125,16 +125,20 @@ def get_dashboard_summary(month: str | None = None) -> dict[str, Any]:
                 
                 if m_str == target_month:
                     t_type = str(r[1]).strip() if len(r) > 1 and r[1] else ""
+                    t_paid = str(r[7]).strip().lower() if len(r) > 7 and r[7] else "sim"
+                    
                     val = 0.0
                     try:
                         val = float(r[5]) if len(r) > 5 and r[5] is not None else 0.0
                     except (ValueError, TypeError):
                         val = 0.0
                     
-                    if t_type == "Receita":
-                        income_month += val
-                    elif t_type == "Despesa":
-                        expense_month += val
+                    # Only sum realized transactions (Pago == 'Sim') in the monthly realized total
+                    if t_paid == "sim":
+                        if t_type == "Receita":
+                            income_month += val
+                        elif t_type == "Despesa":
+                            expense_month += val
 
     # 3. Projections & Reserve from Painel/Premissas
     reserve_min = 310.0
