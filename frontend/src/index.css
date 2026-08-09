@@ -863,6 +863,8 @@ h2 {
 .shell {
   display: flex;
   min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 /* ── Sidebar rail (hidden mobile, shown tablet+) ── */
@@ -996,6 +998,8 @@ h2 {
 .shell-main {
   flex: 1;
   padding-bottom: 80px; /* room for bottom nav on mobile */
+  min-width: 0;
+  width: 100%;
 }
 
 /* ── Bottom Navigation Bar ── */
@@ -1060,11 +1064,13 @@ h2 {
 /* ── Page containers ── */
 .page-content {
   max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
   padding: var(--space-md);
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  min-width: 0;
 }
 
 .page-header {
