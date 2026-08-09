@@ -1,7 +1,7 @@
 [project]
-name = "pluggy-mvp"
-version = "0.1.0"
-description = "MVP local para consultar extrato bancário com Pluggy"
+name = "finscope"
+version = "0.2.0"
+description = "Controle financeiro pessoal orientado a planilha Excel com FastAPI"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
@@ -22,4 +22,4 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-q"
+addopts = "-q -W ignore"
