@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,7 +13,10 @@ from app.schemas import (
     FilterOptionsResponse,
     TransactionCreate,
     TransactionItem,
+    ImportPreviewResponse,
+    ImportConfirmRequest
 )
+from app import import_engine
 
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
@@ -78,6 +81,50 @@ async def create_transaction(payload: TransactionCreate) -> dict[str, Any]:
 async def list_debts() -> list[DebtItem]:
     debts = excel_engine.get_debts_summary()
     return [DebtItem(**d) for d in debts]
+
+@app.post("/api/transactions/import/upload", response_model=ImportPreviewResponse)
+async def upload_extrato(file: UploadFile = File(...)) -> ImportPreviewResponse:
+    content = await file.read()
+    filename = file.filename.lower()
+    
+    if filename.endswith(".ofx"):
+        txs, account_guess = import_engine.parse_ofx(content)
+    elif filename.endswith(".pdf"):
+        txs, account_guess = import_engine.parse_itau_pdf(content)
+    else:
+        raise HTTPException(status_code=400, detail="Formato não suportado. Envie OFX ou PDF (Itaú).")
+        
+    # Get recent transactions to reconcile against
+    db_txs = excel_engine.get_transactions(limit=500)
+    
+    # Reconcile
+    reconciled_txs = import_engine.reconcile_transactions(txs, db_txs)
+    
+    return ImportPreviewResponse(transactions=reconciled_txs, account_guess=account_guess)
+
+@app.post("/api/transactions/import/confirm")
+async def confirm_import(payload: ImportConfirmRequest):
+    # Map back to standard TransactionCreate structure
+    success_count = 0
+    for t in payload.transactions:
+        if t.status == "NEW":
+            # For simplicity, we just add the transactions one by one
+            dt = {
+                "date": t.date,
+                "type": t.type,
+                "category": t.category or "Outros",
+                "description": t.description,
+                "payment_method": "Pix", # default
+                "amount": t.amount,
+                "essential": False,
+                "paid": True,
+                "obs": "Importado via Extrato",
+                "account": t.account or "Itaú - Conta corrente"
+            }
+            excel_engine.add_transaction(dt)
+            success_count += 1
+            
+    return {"message": f"Importação concluída. {success_count} itens adicionados."}
 
 
 # Frontend Serving (Vite dist if present, else fallback static)
