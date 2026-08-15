@@ -64,3 +64,22 @@ class FilterOptionsResponse(BaseModel):
     accounts: list[str]
     months: list[str]
     types: list[str]
+
+
+class ImportTransaction(BaseModel):
+    id: str
+    date: str
+    type: str
+    description: str
+    amount: float
+    status: str
+    category: str | None = None
+    account: str | None = None
+    similarity_score: float | None = None
+
+class ImportPreviewResponse(BaseModel):
+    transactions: list[ImportTransaction]
+    account_guess: str | None = None
+
+class ImportConfirmRequest(BaseModel):
+    transactions: list[ImportTransaction]

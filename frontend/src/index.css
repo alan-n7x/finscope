@@ -1300,3 +1300,95 @@ h2 {
   }
 }
 
+/* ── Import Modal ── */
+.import-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-height: 300px;
+}
+
+.upload-zone {
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 3rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.upload-zone:hover {
+  border-color: var(--primary-color);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.upload-icon {
+  color: var(--primary-color);
+}
+
+.preview-zone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview-table-wrap {
+  max-height: 400px;
+  overflow-y: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.btn-status-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-status-toggle.new { color: var(--success-color); }
+.btn-status-toggle.matched { color: var(--warning-color); }
+.btn-status-toggle.ignored { color: var(--text-muted); }
+
+.btn-status-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.status-ignored {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-new { background: rgba(16, 185, 129, 0.2); color: var(--success-color); }
+.badge-matched { background: rgba(245, 158, 11, 0.2); color: var(--warning-color); }
+.badge-ignored { background: rgba(255, 255, 255, 0.1); color: var(--text-muted); }
+
+.preview-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
