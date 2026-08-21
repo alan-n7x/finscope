@@ -5,6 +5,7 @@ description = "Controle financeiro pessoal orientado a planilha Excel com FastAP
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "aiogram>=3.30.0",
     "aiosqlite>=0.21.0",
     "fastapi>=0.116.0",
     "httpx>=0.28.1",
