@@ -17,11 +17,27 @@ from app.schemas import (
     ImportConfirmRequest
 )
 from app import import_engine
+from contextlib import asynccontextmanager
+
+try:
+    from app.bot.main_bot import start_bot, stop_bot
+except ImportError:
+    start_bot, stop_bot = None, None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    if start_bot:
+        await start_bot()
+    yield
+    # Shutdown
+    if stop_bot:
+        await stop_bot()
 
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
 
-app = FastAPI(title="Finscope — Controle Financeiro", version="0.2.0")
+app = FastAPI(title="Finscope — Controle Financeiro", version="0.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
