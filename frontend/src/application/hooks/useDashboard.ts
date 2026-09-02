@@ -5,9 +5,9 @@ import { GetDashboardSummaryUseCase } from '../use-cases/GetDashboardSummaryUseC
 const repository = new ApiDashboardRepository();
 const getDashboardUseCase = new GetDashboardSummaryUseCase(repository);
 
-export function useDashboard(month?: string) {
+export function useDashboard(month?: string, date?: string) {
   return useQuery({
-    queryKey: ['dashboard', month],
-    queryFn: () => getDashboardUseCase.execute(month),
+    queryKey: ['dashboard', month, date],
+    queryFn: () => getDashboardUseCase.execute(month, date),
   });
 }

@@ -5,9 +5,10 @@ import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 
 interface KpiCardsGridProps {
   summary?: FinancialSummary;
+  selectedDate?: string;
 }
 
-export const KpiCardsGrid: React.FC<KpiCardsGridProps> = ({ summary }) => {
+export const KpiCardsGrid: React.FC<KpiCardsGridProps> = ({ summary, selectedDate }) => {
   const formatCurrency = (val?: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -16,6 +17,10 @@ export const KpiCardsGrid: React.FC<KpiCardsGridProps> = ({ summary }) => {
   };
 
   const monthName = summary?.month || 'Mês Selecionado';
+
+  const balanceFooter = selectedDate
+    ? `Saldo em ${new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(selectedDate + 'T12:00:00'))}`
+    : 'Soma dos saldos bancários';
 
   return (
     <section className="kpi-grid">
@@ -27,7 +32,7 @@ export const KpiCardsGrid: React.FC<KpiCardsGridProps> = ({ summary }) => {
           </div>
         </div>
         <div className="kpi-value">{formatCurrency(summary?.total_balance)}</div>
-        <div className="kpi-footer">Soma dos saldos bancários</div>
+        <div className="kpi-footer">{balanceFooter}</div>
       </Card>
 
       <Card className="kpi-card">

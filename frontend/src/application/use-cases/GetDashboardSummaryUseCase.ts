@@ -9,9 +9,9 @@ export class GetDashboardSummaryUseCase {
     this.repository = repository;
   }
 
-  async execute(month?: string): Promise<{ summary: FinancialSummary; debts: Debt[] }> {
+  async execute(month?: string, date?: string): Promise<{ summary: FinancialSummary; debts: Debt[] }> {
     const [summary, debts] = await Promise.all([
-      this.repository.getDashboardSummary(month),
+      this.repository.getDashboardSummary(month, date),
       this.repository.getDebtsSummary(),
     ]);
     return { summary, debts };
