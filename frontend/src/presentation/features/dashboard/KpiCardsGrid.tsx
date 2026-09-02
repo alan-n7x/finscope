@@ -1,7 +1,7 @@
 import React from 'react';
 import { FinancialSummary } from '../../../domain/value-objects/FinancialSummary';
 import { Card } from '../../components/ui/Card';
-import { TrendingUp, TrendingDown, Wallet, ShieldCheck } from 'lucide-react';
+import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 
 interface KpiCardsGridProps {
   summary?: FinancialSummary;
@@ -52,16 +52,6 @@ export const KpiCardsGrid: React.FC<KpiCardsGridProps> = ({ summary }) => {
         <div className="kpi-footer">Saídas confirmadas em {monthName}</div>
       </Card>
 
-      <Card className="kpi-card highlight-card">
-        <div className="kpi-header">
-          <span>Livre Após Reserva</span>
-          <div className="kpi-icon free-icon">
-            <ShieldCheck size={20} className="text-blue-300" />
-          </div>
-        </div>
-        <div className="kpi-value highlight">{formatCurrency(summary?.free_after_reserve)}</div>
-        <div className="kpi-footer">Descontada reserva de R$ 310,00</div>
-      </Card>
     </section>
   );
 };
