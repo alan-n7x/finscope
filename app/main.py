@@ -1,12 +1,17 @@
 from pathlib import Path
 from typing import Any
+import datetime
 
-from fastapi import FastAPI, HTTPException, Query, File, UploadFile
+from fastapi import FastAPI, HTTPException, Query, File, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import excel_engine
+from app.infra.db.session import get_db_session
+from app.infra.repositories.finance_repository import FinanceRepository
+from app.services.excel_export_service import ExcelExportService
 from app.schemas import (
     DashboardSummaryResponse,
     DebtItem,
@@ -17,11 +22,25 @@ from app.schemas import (
     ImportConfirmRequest
 )
 from app import import_engine
+from contextlib import asynccontextmanager
+
+try:
+    from app.bot.main_bot import start_bot, stop_bot
+except ImportError:
+    start_bot, stop_bot = None, None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if start_bot:
+        await start_bot()
+    yield
+    if stop_bot:
+        await stop_bot()
 
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
 
-app = FastAPI(title="Finscope — Controle Financeiro", version="0.2.0")
+app = FastAPI(title="Finscope — Controle Financeiro", version="0.3.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,23 +50,49 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API Routes
+# ============================================================================
+# HEALTH & STATUS
+# ============================================================================
 @app.get("/health")
 async def health() -> dict[str, str]:
     excel_path = str(excel_engine.get_excel_path())
-    return {"status": "ok", "engine": "excel-database", "excel_path": excel_path}
+    return {
+        "status": "ok",
+        "engine": "postgresql-primary",
+        "fallback_excel_path": excel_path,
+        "version": "0.3.0"
+    }
 
 
+# ============================================================================
+# FINANCIAL API ROUTES
+# ============================================================================
 @app.get("/api/dashboard", response_model=DashboardSummaryResponse)
-async def get_dashboard(month: str | None = Query(default=None, description="Mês no formato YYYY-MM")) -> DashboardSummaryResponse:
-    summary = excel_engine.get_dashboard_summary(month=month)
-    return DashboardSummaryResponse(**summary)
+async def get_dashboard(
+    month: str | None = Query(default=None, description="Mês no formato YYYY-MM"),
+    session: AsyncSession = Depends(get_db_session)
+) -> DashboardSummaryResponse:
+    try:
+        repo = FinanceRepository(session)
+        summary = await repo.get_dashboard_summary(month=month)
+        return DashboardSummaryResponse(**summary)
+    except Exception:
+        # Fallback gracioso para a planilha caso o PostgreSQL esteja offline no Windows
+        summary = excel_engine.get_dashboard_summary(month=month)
+        return DashboardSummaryResponse(**summary)
 
 
 @app.get("/api/options", response_model=FilterOptionsResponse)
-async def get_options() -> FilterOptionsResponse:
-    options = excel_engine.get_filter_options()
-    return FilterOptionsResponse(**options)
+async def get_options(
+    session: AsyncSession = Depends(get_db_session)
+) -> FilterOptionsResponse:
+    try:
+        repo = FinanceRepository(session)
+        options = await repo.get_filter_options()
+        return FilterOptionsResponse(**options)
+    except Exception:
+        options = excel_engine.get_filter_options()
+        return FilterOptionsResponse(**options)
 
 
 @app.get("/api/transactions", response_model=list[TransactionItem])
@@ -57,31 +102,78 @@ async def list_transactions(
     search: str | None = Query(default=None),
     status: str | None = Query(default=None),
     limit: int = Query(default=200, le=500),
+    session: AsyncSession = Depends(get_db_session)
 ) -> list[TransactionItem]:
-    txs = excel_engine.get_transactions(
-        month=month,
-        category=category,
-        search=search,
-        status=status,
-        limit=limit,
-    )
-    return [TransactionItem(**t) for t in txs]
+    try:
+        repo = FinanceRepository(session)
+        txs = await repo.list_transactions(
+            month=month,
+            category=category,
+            search=search,
+            status=status,
+            limit=limit,
+        )
+        return [TransactionItem(**t) for t in txs]
+    except Exception:
+        txs = excel_engine.get_transactions(
+            month=month,
+            category=category,
+            search=search,
+            status=status,
+            limit=limit,
+        )
+        return [TransactionItem(**t) for t in txs]
 
 
 @app.post("/api/transactions", response_model=dict[str, Any])
-async def create_transaction(payload: TransactionCreate) -> dict[str, Any]:
+async def create_transaction(
+    payload: TransactionCreate,
+    session: AsyncSession = Depends(get_db_session)
+) -> dict[str, Any]:
     try:
+        # Registra no Excel legado para manter sincronizado com o OneDrive
         res = excel_engine.add_transaction(payload.model_dump())
         return res
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao gravar na planilha: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao gravar lançamento: {e}")
 
 
 @app.get("/api/debts", response_model=list[DebtItem])
-async def list_debts() -> list[DebtItem]:
-    debts = excel_engine.get_debts_summary()
-    return [DebtItem(**d) for d in debts]
+async def list_debts(
+    session: AsyncSession = Depends(get_db_session)
+) -> list[DebtItem]:
+    try:
+        repo = FinanceRepository(session)
+        debts = await repo.list_debts()
+        return [DebtItem(**d) for d in debts]
+    except Exception:
+        debts = excel_engine.get_debts_summary()
+        return [DebtItem(**d) for d in debts]
 
+
+# ============================================================================
+# EXPORT & REPORTING (Excel sob Demanda)
+# ============================================================================
+@app.get("/api/reports/export-excel")
+async def export_excel_report(
+    month: str | None = Query(default=None),
+    session: AsyncSession = Depends(get_db_session)
+):
+    try:
+        report_stream = await ExcelExportService.generate_financial_report(session, month=month)
+        filename = f"finscope_relatorio_{month or datetime.date.today().strftime('%Y-%m')}.xlsx"
+        return StreamingResponse(
+            report_stream,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar relatório Excel: {e}")
+
+
+# ============================================================================
+# IMPORT & CONCILIAÇÃO BANCÁRIA
+# ============================================================================
 @app.post("/api/transactions/import/upload", response_model=ImportPreviewResponse)
 async def upload_extrato(file: UploadFile = File(...)) -> ImportPreviewResponse:
     content = await file.read()
@@ -94,27 +186,23 @@ async def upload_extrato(file: UploadFile = File(...)) -> ImportPreviewResponse:
     else:
         raise HTTPException(status_code=400, detail="Formato não suportado. Envie OFX ou PDF (Itaú).")
         
-    # Get recent transactions to reconcile against
     db_txs = excel_engine.get_transactions(limit=500)
-    
-    # Reconcile
     reconciled_txs = import_engine.reconcile_transactions(txs, db_txs)
     
     return ImportPreviewResponse(transactions=reconciled_txs, account_guess=account_guess)
 
+
 @app.post("/api/transactions/import/confirm")
 async def confirm_import(payload: ImportConfirmRequest):
-    # Map back to standard TransactionCreate structure
     success_count = 0
     for t in payload.transactions:
         if t.status == "NEW":
-            # For simplicity, we just add the transactions one by one
             dt = {
                 "date": t.date,
                 "type": t.type,
                 "category": t.category or "Outros",
                 "description": t.description,
-                "payment_method": "Pix", # default
+                "payment_method": "Pix",
                 "amount": t.amount,
                 "essential": False,
                 "paid": True,
@@ -127,7 +215,9 @@ async def confirm_import(payload: ImportConfirmRequest):
     return {"message": f"Importação concluída. {success_count} itens adicionados."}
 
 
-# Frontend Serving (Vite dist if present, else fallback static)
+# ============================================================================
+# FRONTEND SERVING
+# ============================================================================
 if FRONTEND_DIST.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 

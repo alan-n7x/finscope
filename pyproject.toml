@@ -5,15 +5,21 @@ description = "Controle financeiro pessoal orientado a planilha Excel com FastAP
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "aiogram>=3.30.0",
     "aiosqlite>=0.21.0",
+    "alembic>=1.19.1",
+    "asyncpg>=0.31.0",
     "fastapi>=0.116.0",
+    "greenlet>=3.5.5",
     "httpx>=0.28.1",
     "ofxparse>=0.21",
     "openpyxl>=3.1.5",
     "pdfplumber>=0.11.10",
+    "psycopg2-binary>=2.9.12",
     "pydantic>=2.11.0",
     "pydantic-settings>=2.10.0",
     "python-multipart>=0.0.32",
+    "sqlalchemy>=2.0.52",
     "uvicorn[standard]>=0.35.0",
 ]
 

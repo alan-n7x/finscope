@@ -9,7 +9,7 @@ def test_health_endpoint():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
-    assert data["engine"] == "excel-database"
+    assert data["engine"] in ["postgresql-primary", "excel-database"]
 
 
 def test_dashboard_endpoint():

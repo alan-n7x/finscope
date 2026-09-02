@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     pluggy_client_secret: str = ""
     pluggy_api_url: str = "https://api.pluggy.ai"
     database_url: str = "sqlite+aiosqlite:///./pluggy.db"
+    telegram_bot_token: str = ""
+    telegram_allowed_user_id: int | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
