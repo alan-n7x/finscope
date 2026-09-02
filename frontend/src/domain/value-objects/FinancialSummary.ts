@@ -2,6 +2,7 @@ import { Account } from '../entities/Account';
 
 export interface FinancialSummaryProps {
   month: string;
+  ref_date?: string;
   total_balance: number;
   income_month: number;
   expense_month: number;
@@ -20,6 +21,7 @@ export class FinancialSummary {
   }
 
   get month(): string { return this.props.month; }
+  get ref_date(): string | undefined { return this.props.ref_date; }
   get total_balance(): number { return this.props.total_balance; }
   get income_month(): number { return this.props.income_month; }
   get expense_month(): number { return this.props.expense_month; }

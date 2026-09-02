@@ -5,14 +5,17 @@ from decimal import Decimal
 from typing import Any, List, Optional
 import uuid
 
-from sqlalchemy import select, func, desc, or_
+from sqlalchemy import select, func, desc, or_, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.infra.db.models import (
     Account,
+    AccountBalanceSnapshot,
     Category,
     Debt,
+    DebtPriority,
+    DebtStatus,
     Transaction,
     TransactionType,
     TransactionStatus,
@@ -23,8 +26,30 @@ class FinanceRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_dashboard_summary(self, month: Optional[str] = None) -> dict[str, Any]:
-        target_month = month or datetime.date.today().strftime("%Y-%m")
+    async def get_dashboard_summary(self, month: Optional[str] = None, date: Optional[str] = None) -> dict[str, Any]:
+        # Resolve a data de referencia: usa 'date' se fornecido, senao extrai do 'month', senao hoje
+        today = datetime.date.today()
+        if date:
+            try:
+                ref_date = datetime.date.fromisoformat(date)
+            except ValueError:
+                ref_date = today
+        elif month:
+            try:
+                year_m, month_m = month.split("-")
+                y, m = int(year_m), int(month_m)
+                # Ultimo dia do mes solicitado; se for o mes corrente usa hoje
+                if m == 12:
+                    last_day_of_month = datetime.date(y, 12, 31)
+                else:
+                    last_day_of_month = datetime.date(y, m + 1, 1) - datetime.timedelta(days=1)
+                ref_date = min(last_day_of_month, today)
+            except (ValueError, AttributeError):
+                ref_date = today
+        else:
+            ref_date = today
+
+        target_month = ref_date.strftime("%Y-%m")
 
         # 1. Contas e Saldos Calculados via Ledger
         acc_stmt = select(Account).where(Account.is_active == True).order_by(Account.name)
@@ -35,39 +60,77 @@ class FinanceRepository:
         total_balance = Decimal("0.00")
 
         for acc in accounts:
-            bal_stmt = select(
-                func.coalesce(
-                    func.sum(
-                        func.case(
-                            (Transaction.type == TransactionType.INCOME, Transaction.amount),
-                            (Transaction.type == TransactionType.EXPENSE, -Transaction.amount),
-                            else_=Decimal("0.00"),
-                        )
-                    ),
-                    Decimal("0.00"),
-                )
-            ).where(
-                Transaction.account_id == acc.id,
-                Transaction.status == TransactionStatus.POSTED,
+            # Preferencia 1: snapshot mais recente (saldo bancario real confirmado)
+            snap_stmt = (
+                select(AccountBalanceSnapshot)
+                .where(AccountBalanceSnapshot.account_id == acc.id)
+                .order_by(desc(AccountBalanceSnapshot.snapshot_date))
+                .limit(1)
             )
-            bal_res = await self.session.execute(bal_stmt)
-            acc_balance = bal_res.scalar_one() + acc.initial_balance
+            snap_res = await self.session.execute(snap_stmt)
+            latest_snapshot = snap_res.scalar_one_or_none()
+
+            if latest_snapshot is not None:
+                # Usa o saldo real do banco + lancamentos POSTERIORES ao snapshot e ATE ref_date
+                post_snap_stmt = select(
+                    func.coalesce(
+                        func.sum(
+                            case(
+                                (Transaction.type == TransactionType.INCOME, Transaction.amount),
+                                (Transaction.type == TransactionType.EXPENSE, -Transaction.amount),
+                                else_=Decimal("0.00"),
+                            )
+                        ),
+                        Decimal("0.00"),
+                    )
+                ).where(
+                    Transaction.account_id == acc.id,
+                    Transaction.status == TransactionStatus.POSTED,
+                    Transaction.date > latest_snapshot.snapshot_date,
+                    Transaction.date <= ref_date,
+                )
+                post_snap_res = await self.session.execute(post_snap_stmt)
+                acc_balance = latest_snapshot.balance + post_snap_res.scalar_one()
+                balance_source = "snapshot"
+            else:
+                # Fallback: initial_balance + lancamentos POSTED ate ref_date
+                bal_stmt = select(
+                    func.coalesce(
+                        func.sum(
+                            case(
+                                (Transaction.type == TransactionType.INCOME, Transaction.amount),
+                                (Transaction.type == TransactionType.EXPENSE, -Transaction.amount),
+                                else_=Decimal("0.00"),
+                            )
+                        ),
+                        Decimal("0.00"),
+                    )
+                ).where(
+                    Transaction.account_id == acc.id,
+                    Transaction.status == TransactionStatus.POSTED,
+                    Transaction.date <= ref_date,
+                )
+                bal_res = await self.session.execute(bal_stmt)
+                acc_balance = bal_res.scalar_one() + acc.initial_balance
+                balance_source = "ledger"
 
             accounts_list.append({
                 "name": acc.name,
                 "type": acc.type.value if hasattr(acc.type, "value") else str(acc.type),
                 "balance": float(acc_balance),
+                "balance_source": balance_source,
             })
             total_balance += acc_balance
 
-        # 2. Receitas e Despesas Consolidadas do Mês
-        # Filtra pelo mês no formato YYYY-MM
+        # 2. Receitas e Despesas do mes da data de referencia
         year_str, month_str = target_month.split("-")
         start_date = datetime.date(int(year_str), int(month_str), 1)
         if int(month_str) == 12:
             end_date = datetime.date(int(year_str) + 1, 1, 1)
         else:
             end_date = datetime.date(int(year_str), int(month_str) + 1, 1)
+        # Receitas/despesas consideram apenas ate a data de referencia dentro do mes
+        cutoff_date = min(ref_date, end_date - datetime.timedelta(days=1))
 
         income_stmt = select(
             func.coalesce(func.sum(Transaction.amount), Decimal("0.00"))
@@ -75,7 +138,7 @@ class FinanceRepository:
             Transaction.type == TransactionType.INCOME,
             Transaction.status == TransactionStatus.POSTED,
             Transaction.date >= start_date,
-            Transaction.date < end_date,
+            Transaction.date <= cutoff_date,
         )
         income_res = await self.session.execute(income_stmt)
         income_month = income_res.scalar_one()
@@ -86,7 +149,7 @@ class FinanceRepository:
             Transaction.type == TransactionType.EXPENSE,
             Transaction.status == TransactionStatus.POSTED,
             Transaction.date >= start_date,
-            Transaction.date < end_date,
+            Transaction.date <= cutoff_date,
         )
         expense_res = await self.session.execute(expense_stmt)
         expense_month = expense_res.scalar_one()
@@ -97,6 +160,7 @@ class FinanceRepository:
 
         return {
             "month": target_month,
+            "ref_date": ref_date.isoformat(),
             "total_balance": round(float(total_balance), 2),
             "income_month": round(float(income_month), 2),
             "expense_month": round(float(expense_month), 2),

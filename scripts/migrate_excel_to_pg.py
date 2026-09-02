@@ -9,7 +9,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict
 
 import openpyxl
-from sqlalchemy import select, func
+from sqlalchemy import select, func, case
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 # Adiciona o path raiz do projeto
@@ -20,6 +20,7 @@ from app.infra.db.models import (
     User,
     Account,
     AccountType,
+    AccountBalanceSnapshot,
     Category,
     Debt,
     DebtPriority,
@@ -31,9 +32,13 @@ from app.infra.db.models import (
 from app.excel_engine import get_excel_path
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
+    "DATABASE_URL",
     "postgresql+asyncpg://postgres:postgres@localhost:5432/finscope"
 )
+
+# Dados do usuario padrao criado durante a migracao (sobrescreva via .env)
+DEFAULT_USER_NAME = os.getenv("FINSCOPE_USER_NAME", "Admin Finscope")
+DEFAULT_USER_EMAIL = os.getenv("FINSCOPE_USER_EMAIL", "admin@finscope.local")
 
 
 def to_decimal(val: any) -> Decimal:
@@ -67,7 +72,7 @@ def parse_date(val: any) -> datetime.date:
 
 async def run_etl():
     excel_file = get_excel_path()
-    print(f"📖 Lendo arquivo de origem: {excel_file}")
+    print(f"[INFO] Lendo arquivo de origem: {excel_file}")
     
     if not excel_file.exists():
         raise FileNotFoundError(f"Arquivo Excel não encontrado em {excel_file}")
@@ -77,36 +82,45 @@ async def run_etl():
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     async with engine.begin() as conn:
-        print("🛠️ Criando tabelas no PostgreSQL se não existirem...")
+        print("[INFO] Recriando tabelas no PostgreSQL para migracao limpa...")
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
     async with session_factory() as session:
         async with session.begin():
-            print("🚀 Iniciando Transação Atômica de Migração...")
+            print("[INFO] Iniciando Transacao Atomica de Migracao...")
 
-            # 1. Usuário Padrão
-            user_stmt = select(User).where(User.email == "alan@finscope.local")
+            # 1. Usuario Padrao
+            user_stmt = select(User).where(User.email == DEFAULT_USER_EMAIL)
             res = await session.execute(user_stmt)
             user = res.scalar_one_or_none()
             if not user:
-                user = User(name="Alan dos Santos Oliveira", email="alan@finscope.local")
+                user = User(name=DEFAULT_USER_NAME, email=DEFAULT_USER_EMAIL)
                 session.add(user)
                 await session.flush()
-                print(f"👤 Usuário criado: {user.name} ({user.id})")
+                print(f"[INFO] Usuario criado: {user.name} ({user.id})")
 
             # 2. Migrar Contas (Sheet: 'Contas')
+            # account_snapshots guarda: {acc_key -> (actual_balance, snapshot_date)}
+            account_snapshots: Dict[str, tuple] = {}
             account_map: Dict[str, Account] = {}
             if "Contas" in wb.sheetnames:
                 ws_contas = wb["Contas"]
                 for row in ws_contas.iter_rows(min_row=4, values_only=True):
                     if not row[0] or str(row[0]).strip() == "":
                         continue
-                    
+
                     acc_name = str(row[0]).strip()
                     acc_type_str = str(row[1]).strip() if len(row) > 1 and row[1] else "Conta corrente"
+                    # col C = Saldo inicial do mes, col D = Saldo bancario atual confirmado
+                    initial_bal = to_decimal(row[2] if len(row) > 2 else None)
+                    actual_bal = to_decimal(row[3] if len(row) > 3 else None)
+                    # col I = data de atualizacao do saldo
+                    updated_at_raw = row[8] if len(row) > 8 else None
+                    snapshot_date = parse_date(updated_at_raw) if updated_at_raw else None
 
                     acc_type = (
-                        AccountType.CREDIT_CARD 
+                        AccountType.CREDIT_CARD
                         if "cartão" in acc_type_str.lower() or "crédito" in acc_name.lower()
                         else AccountType.CHECKING
                     )
@@ -115,14 +129,30 @@ async def run_etl():
                         user_id=user.id,
                         name=acc_name,
                         type=acc_type,
-                        initial_balance=Decimal("0.00"),
+                        initial_balance=initial_bal,
                         currency="BRL"
                     )
                     session.add(acc)
-                    account_map[acc_name.lower()] = acc
+                    acc_key = acc_name.lower()
+                    account_map[acc_key] = acc
+                    if snapshot_date and actual_bal > 0:
+                        account_snapshots[acc_key] = (actual_bal, snapshot_date)
 
                 await session.flush()
-                print(f"🏦 {len(account_map)} Contas migradas com sucesso.")
+
+                # Gravar snapshots de saldo bancario real (coluna D da planilha)
+                snapshots_created = 0
+                for acc_key, (actual_bal, snap_date) in account_snapshots.items():
+                    snap = AccountBalanceSnapshot(
+                        account_id=account_map[acc_key].id,
+                        snapshot_date=snap_date,
+                        balance=actual_bal,
+                    )
+                    session.add(snap)
+                    snapshots_created += 1
+
+                await session.flush()
+                print(f"[INFO] {len(account_map)} Contas migradas | {snapshots_created} snapshots de saldo real gravados.")
 
             default_acc_name = "itaú - conta corrente"
             if default_acc_name not in account_map:
@@ -162,7 +192,7 @@ async def run_etl():
                     debt_map[creditor.lower()] = debt
 
                 await session.flush()
-                print(f"💳 {len(debt_map)} Contratos de Dívidas migrados.")
+                print(f"[INFO] {len(debt_map)} Contratos de Dividas migrados.")
 
             # 4. Migrar Lançamentos (Sheet: 'Lancamentos')
             category_map: Dict[str, Category] = {}
@@ -183,7 +213,8 @@ async def run_etl():
                     essential_str = str(row[6]).strip().lower() if row[6] else "não"
                     paid_str = str(row[7]).strip().lower() if row[7] else "sim"
                     notes = str(row[8]).strip() if row[8] else None
-                    acc_name = str(row[11]).strip().lower() if len(row) > 11 and row[11] else default_acc_name
+                    acc_name_raw = str(row[11]).strip() if len(row) > 11 and row[11] else "Itaú - Conta corrente"
+                    acc_name = acc_name_raw.lower()
 
                     if amount <= 0:
                         continue
@@ -197,8 +228,20 @@ async def run_etl():
                         category_map[cat_key] = cat
                     category = category_map[cat_key]
 
-                    # Mapear Conta
-                    account = account_map.get(acc_name, account_map[default_acc_name])
+                    # Mapear Conta — se nao encontrada, cria dinamicamente (sem fallback silencioso)
+                    if acc_name not in account_map:
+                        new_acc = Account(
+                            user_id=user.id,
+                            name=acc_name_raw,
+                            type=AccountType.CHECKING,
+                            initial_balance=Decimal("0.00"),
+                            currency="BRL"
+                        )
+                        session.add(new_acc)
+                        await session.flush()
+                        account_map[acc_name] = new_acc
+                        print(f"[WARN] Conta nao cadastrada na aba Contas — criada automaticamente: '{acc_name_raw}'")
+                    account = account_map[acc_name]
 
                     # Mapear Tipo Transacional
                     if "receita" in t_type_str.lower():
@@ -234,11 +277,11 @@ async def run_etl():
                     total_txs_migrated += 1
 
                 await session.flush()
-                print(f"📝 {total_txs_migrated} Lançamentos inseridos no Ledger com sucesso.")
+                print(f"[INFO] {total_txs_migrated} Lancamentos inseridos no Ledger com sucesso.")
 
         # 5. Auditoria Pós-Migração
         print("\n" + "=" * 80)
-        print("📊 RELATÓRIO DE AUDITORIA CONTÁBIL CRUZADA (Centavo a Centavo)")
+        print("RELATORIO DE AUDITORIA CONTABIL CRUZADA (Centavo a Centavo)")
         print("=" * 80)
 
         audit_stmt = (
@@ -246,7 +289,7 @@ async def run_etl():
                 Account.name,
                 func.coalesce(
                     func.sum(
-                        func.case(
+                        case(
                             (Transaction.type == TransactionType.INCOME, Transaction.amount),
                             (Transaction.type == TransactionType.EXPENSE, -Transaction.amount),
                             else_=Decimal("0.00")
@@ -265,7 +308,7 @@ async def run_etl():
             print(f"Conta: {acc_name:<35} | Saldo Calculado (PG Ledger): R$ {calc_bal:>12.2f}")
 
         print("-" * 80)
-        print("✅ Migração ETL concluída e validada com sucesso!")
+        print("[SUCESSO] Migracao ETL concluida e validada com sucesso!")
         print("=" * 80 + "\n")
 
     await engine.dispose()
