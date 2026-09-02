@@ -69,12 +69,13 @@ async def health() -> dict[str, str]:
 # ============================================================================
 @app.get("/api/dashboard", response_model=DashboardSummaryResponse)
 async def get_dashboard(
-    month: str | None = Query(default=None, description="Mês no formato YYYY-MM"),
+    month: str | None = Query(default=None, description="Mes no formato YYYY-MM"),
+    date: str | None = Query(default=None, description="Data de referencia no formato YYYY-MM-DD"),
     session: AsyncSession = Depends(get_db_session)
 ) -> DashboardSummaryResponse:
     try:
         repo = FinanceRepository(session)
-        summary = await repo.get_dashboard_summary(month=month)
+        summary = await repo.get_dashboard_summary(month=month, date=date)
         return DashboardSummaryResponse(**summary)
     except Exception:
         # Fallback gracioso para a planilha caso o PostgreSQL esteja offline no Windows

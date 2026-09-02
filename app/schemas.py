@@ -6,10 +6,12 @@ class AccountSummary(BaseModel):
     name: str
     type: str
     balance: float
+    balance_source: str = "ledger"
 
 
 class DashboardSummaryResponse(BaseModel):
     month: str
+    ref_date: str | None = None
     total_balance: float
     income_month: float
     expense_month: float
