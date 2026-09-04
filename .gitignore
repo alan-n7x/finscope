@@ -12,3 +12,10 @@ app/data/*.xlsx
 app/data/*.xls
 *.xlsx
 *.xls
+
+# Ignorar PDFs de extratos e logs temporários
+app/data/*.pdf
+*.pdf
+scratch/
+debug.json
+.api_response.json
