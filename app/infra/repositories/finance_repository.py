@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Any, List, Optional
 import uuid
 
-from sqlalchemy import select, func, desc, or_, case
+from sqlalchemy import select, func, desc, or_, case, and_, not_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -78,6 +78,8 @@ class FinanceRepository:
                             case(
                                 (Transaction.type == TransactionType.INCOME, Transaction.amount),
                                 (Transaction.type == TransactionType.EXPENSE, -Transaction.amount),
+                                (and_(Transaction.type == TransactionType.TRANSFER, Transaction.description.ilike("%recebido%")), Transaction.amount),
+                                (and_(Transaction.type == TransactionType.TRANSFER, not_(Transaction.description.ilike("%recebido%"))), -Transaction.amount),
                                 else_=Decimal("0.00"),
                             )
                         ),
@@ -100,6 +102,8 @@ class FinanceRepository:
                             case(
                                 (Transaction.type == TransactionType.INCOME, Transaction.amount),
                                 (Transaction.type == TransactionType.EXPENSE, -Transaction.amount),
+                                (and_(Transaction.type == TransactionType.TRANSFER, Transaction.description.ilike("%recebido%")), Transaction.amount),
+                                (and_(Transaction.type == TransactionType.TRANSFER, not_(Transaction.description.ilike("%recebido%"))), -Transaction.amount),
                                 else_=Decimal("0.00"),
                             )
                         ),
