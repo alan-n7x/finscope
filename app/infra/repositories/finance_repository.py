@@ -63,7 +63,10 @@ class FinanceRepository:
             # Preferencia 1: snapshot mais recente (saldo bancario real confirmado)
             snap_stmt = (
                 select(AccountBalanceSnapshot)
-                .where(AccountBalanceSnapshot.account_id == acc.id)
+                .where(
+                    AccountBalanceSnapshot.account_id == acc.id,
+                    AccountBalanceSnapshot.snapshot_date <= ref_date,
+                )
                 .order_by(desc(AccountBalanceSnapshot.snapshot_date))
                 .limit(1)
             )
@@ -249,7 +252,7 @@ class FinanceRepository:
         txs = res.scalars().all()
 
         results = []
-        for idx, t in enumerate(txs, start=1):
+        for t in txs:
             type_display = "Despesa"
             if t.type == TransactionType.INCOME:
                 type_display = "Receita"
@@ -259,7 +262,7 @@ class FinanceRepository:
             paid_display = "Sim" if t.status == TransactionStatus.POSTED else "Não"
 
             results.append({
-                "id": idx,
+                "id": str(t.id),
                 "date": t.date.strftime("%Y-%m-%d"),
                 "month": t.date.strftime("%Y-%m"),
                 "type": type_display,

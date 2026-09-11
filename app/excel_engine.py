@@ -5,7 +5,7 @@ import datetime
 from typing import Any
 import openpyxl
 
-EXCEL_PATH = pathlib.Path(__file__).resolve().parent / "data" / "database.xlsx"
+EXCEL_PATH = pathlib.Path(__file__).resolve().parent / "data" / "controle_financeiro.xlsx"
 FALLBACK_ONEDRIVE_PATH = pathlib.Path(r"C:\Users\ndala\OneDrive\Documentos\Financeiro\controle_financeiro.xlsx")
 
 

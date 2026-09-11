@@ -23,7 +23,7 @@ class DashboardSummaryResponse(BaseModel):
 
 
 class TransactionItem(BaseModel):
-    id: int
+    id: str
     date: str
     month: str
     type: str

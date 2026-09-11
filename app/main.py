@@ -6,12 +6,14 @@ from fastapi import FastAPI, HTTPException, Query, File, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import excel_engine
-from app.infra.db.session import get_db_session
+from app.infra.db.session import engine, get_db_session
 from app.infra.repositories.finance_repository import FinanceRepository
 from app.services.excel_export_service import ExcelExportService
+from app.services.transaction_service import TransactionService
 from app.schemas import (
     DashboardSummaryResponse,
     DebtItem,
@@ -33,9 +35,12 @@ except ImportError:
 async def lifespan(app: FastAPI):
     if start_bot:
         await start_bot()
-    yield
-    if stop_bot:
-        await stop_bot()
+    try:
+        yield
+    finally:
+        if stop_bot:
+            await stop_bot()
+        await engine.dispose()
 
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIST = BASE_DIR.parent / "frontend" / "dist"
@@ -54,12 +59,14 @@ app.add_middleware(
 # HEALTH & STATUS
 # ============================================================================
 @app.get("/health")
-async def health() -> dict[str, str]:
-    excel_path = str(excel_engine.get_excel_path())
+async def health(session: AsyncSession = Depends(get_db_session)) -> dict[str, str]:
+    try:
+        await session.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="PostgreSQL indisponível") from exc
     return {
         "status": "ok",
-        "engine": "postgresql-primary",
-        "fallback_excel_path": excel_path,
+        "engine": "postgresql",
         "version": "0.3.0"
     }
 
@@ -73,27 +80,18 @@ async def get_dashboard(
     date: str | None = Query(default=None, description="Data de referencia no formato YYYY-MM-DD"),
     session: AsyncSession = Depends(get_db_session)
 ) -> DashboardSummaryResponse:
-    try:
-        repo = FinanceRepository(session)
-        summary = await repo.get_dashboard_summary(month=month, date=date)
-        return DashboardSummaryResponse(**summary)
-    except Exception:
-        # Fallback gracioso para a planilha caso o PostgreSQL esteja offline no Windows
-        summary = excel_engine.get_dashboard_summary(month=month)
-        return DashboardSummaryResponse(**summary)
+    repo = FinanceRepository(session)
+    summary = await repo.get_dashboard_summary(month=month, date=date)
+    return DashboardSummaryResponse(**summary)
 
 
 @app.get("/api/options", response_model=FilterOptionsResponse)
 async def get_options(
     session: AsyncSession = Depends(get_db_session)
 ) -> FilterOptionsResponse:
-    try:
-        repo = FinanceRepository(session)
-        options = await repo.get_filter_options()
-        return FilterOptionsResponse(**options)
-    except Exception:
-        options = excel_engine.get_filter_options()
-        return FilterOptionsResponse(**options)
+    repo = FinanceRepository(session)
+    options = await repo.get_filter_options()
+    return FilterOptionsResponse(**options)
 
 
 @app.get("/api/transactions", response_model=list[TransactionItem])
@@ -105,25 +103,15 @@ async def list_transactions(
     limit: int = Query(default=200, le=500),
     session: AsyncSession = Depends(get_db_session)
 ) -> list[TransactionItem]:
-    try:
-        repo = FinanceRepository(session)
-        txs = await repo.list_transactions(
-            month=month,
-            category=category,
-            search=search,
-            status=status,
-            limit=limit,
-        )
-        return [TransactionItem(**t) for t in txs]
-    except Exception:
-        txs = excel_engine.get_transactions(
-            month=month,
-            category=category,
-            search=search,
-            status=status,
-            limit=limit,
-        )
-        return [TransactionItem(**t) for t in txs]
+    repo = FinanceRepository(session)
+    txs = await repo.list_transactions(
+        month=month,
+        category=category,
+        search=search,
+        status=status,
+        limit=limit,
+    )
+    return [TransactionItem(**t) for t in txs]
 
 
 @app.post("/api/transactions", response_model=dict[str, Any])
@@ -132,24 +120,22 @@ async def create_transaction(
     session: AsyncSession = Depends(get_db_session)
 ) -> dict[str, Any]:
     try:
-        # Registra no Excel legado para manter sincronizado com o OneDrive
-        res = excel_engine.add_transaction(payload.model_dump())
-        return res
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao gravar lançamento: {e}")
+        transaction, _ = await TransactionService(session).create(payload)
+        await session.commit()
+        await session.refresh(transaction, attribute_names=["account", "category"])
+        return TransactionService.serialize(transaction)
+    except ValueError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.get("/api/debts", response_model=list[DebtItem])
 async def list_debts(
     session: AsyncSession = Depends(get_db_session)
 ) -> list[DebtItem]:
-    try:
-        repo = FinanceRepository(session)
-        debts = await repo.list_debts()
-        return [DebtItem(**d) for d in debts]
-    except Exception:
-        debts = excel_engine.get_debts_summary()
-        return [DebtItem(**d) for d in debts]
+    repo = FinanceRepository(session)
+    debts = await repo.list_debts()
+    return [DebtItem(**d) for d in debts]
 
 
 # ============================================================================
@@ -176,7 +162,10 @@ async def export_excel_report(
 # IMPORT & CONCILIAÇÃO BANCÁRIA
 # ============================================================================
 @app.post("/api/transactions/import/upload", response_model=ImportPreviewResponse)
-async def upload_extrato(file: UploadFile = File(...)) -> ImportPreviewResponse:
+async def upload_extrato(
+    file: UploadFile = File(...),
+    session: AsyncSession = Depends(get_db_session),
+) -> ImportPreviewResponse:
     content = await file.read()
     filename = file.filename.lower()
     
@@ -187,31 +176,43 @@ async def upload_extrato(file: UploadFile = File(...)) -> ImportPreviewResponse:
     else:
         raise HTTPException(status_code=400, detail="Formato não suportado. Envie OFX ou PDF (Itaú).")
         
-    db_txs = excel_engine.get_transactions(limit=500)
+    db_txs = await FinanceRepository(session).list_transactions(limit=500)
     reconciled_txs = import_engine.reconcile_transactions(txs, db_txs)
     
     return ImportPreviewResponse(transactions=reconciled_txs, account_guess=account_guess)
 
 
 @app.post("/api/transactions/import/confirm")
-async def confirm_import(payload: ImportConfirmRequest):
+async def confirm_import(
+    payload: ImportConfirmRequest,
+    session: AsyncSession = Depends(get_db_session),
+):
     success_count = 0
-    for t in payload.transactions:
-        if t.status == "NEW":
-            dt = {
-                "date": t.date,
-                "type": t.type,
-                "category": t.category or "Outros",
-                "description": t.description,
-                "payment_method": "Pix",
-                "amount": t.amount,
-                "essential": False,
-                "paid": True,
-                "obs": "Importado via Extrato",
-                "account": t.account or "Itaú - Conta corrente"
-            }
-            excel_engine.add_transaction(dt)
-            success_count += 1
+    try:
+        service = TransactionService(session)
+        for t in payload.transactions:
+            if t.status == "NEW":
+                transaction, created = await service.create(
+                    TransactionCreate(
+                        date=t.date,
+                        type=t.type,
+                        category=t.category or "Outros",
+                        description=t.description,
+                        payment_method="Pix",
+                        amount=t.amount,
+                        essential=False,
+                        paid=True,
+                        obs="Importado via Extrato",
+                        account=t.account or "Itaú - Conta corrente",
+                    ),
+                    external_id=f"import:{t.id}",
+                )
+                if created:
+                    success_count += 1
+        await session.commit()
+    except ValueError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
             
     return {"message": f"Importação concluída. {success_count} itens adicionados."}
 

@@ -2,7 +2,7 @@ export type TransactionType = 'Receita' | 'Despesa' | 'Transferência';
 export type PaymentStatus = 'Sim' | 'Não';
 
 export interface TransactionProps {
-  id: number;
+  id: string;
   date: string;
   month: string;
   type: TransactionType;
@@ -23,7 +23,7 @@ export class Transaction {
     this.props = props;
   }
 
-  get id(): number { return this.props.id; }
+  get id(): string { return this.props.id; }
   get date(): string { return this.props.date; }
   get month(): string { return this.props.month; }
   get type(): TransactionType { return this.props.type; }

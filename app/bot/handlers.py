@@ -4,8 +4,10 @@ from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.filters import Command
 
-from app import excel_engine
 from app.config import get_settings
+from app.infra.db.session import async_session_factory
+from app.schemas import TransactionCreate
+from app.services.transaction_service import TransactionService
 
 router = Router()
 settings = get_settings()
@@ -35,7 +37,7 @@ async def cmd_start(message: Message) -> None:
         "Basta digitar o valor e a descrição. Por exemplo:\n\n"
         "`50 Almoço`\n"
         "`12.50 Uber`\n\n"
-        "Os lançamentos vão direto para a sua planilha na categoria 'Outros'."
+        "Os lançamentos são registrados no Finscope na categoria 'Outros'."
     )
     await message.answer(welcome_text, parse_mode="Markdown")
 
@@ -73,24 +75,26 @@ async def process_transaction(message: Message) -> None:
         await message.answer("⚠️ Valor inválido.")
         return
 
-    # Add to Excel
     today = datetime.datetime.now().strftime("%Y-%m-%d")
-    
-    dt = {
-        'date': today,
-        'type': 'Despesa',
-        'category': 'Outros',
-        'description': description,
-        'payment_method': 'Pix', 
-        'amount': amount,
-        'essential': False,
-        'paid': True,
-        'obs': 'Lançado via Telegram',
-        'account': 'Itaú - Conta corrente'
-    }
-    
+
     try:
-        excel_engine.add_transaction(dt)
+        async with async_session_factory() as session:
+            await TransactionService(session).create(
+                TransactionCreate(
+                    date=today,
+                    type="Despesa",
+                    category="Outros",
+                    description=description,
+                    payment_method="Pix",
+                    amount=amount,
+                    essential=False,
+                    paid=True,
+                    obs="Lançado via Telegram",
+                    account="Itaú - Conta corrente",
+                ),
+                external_id=f"telegram:{message.chat.id}:{message.message_id}",
+            )
+            await session.commit()
         await message.answer(f"✅ Lançado: **R$ {amount:.2f}** - {description}", parse_mode="Markdown")
     except Exception as e:
-        await message.answer(f"❌ Erro ao salvar na planilha:\n{str(e)}")
+        await message.answer(f"❌ Erro ao salvar lançamento:\n{str(e)}")
