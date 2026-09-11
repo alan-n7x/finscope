@@ -5,10 +5,11 @@ import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 
 interface KpiCardsGridProps {
   summary?: FinancialSummary;
-  selectedDate?: string;
+  selectedPeriod?: string;
+  loading?: boolean;
 }
 
-export const KpiCardsGrid: React.FC<KpiCardsGridProps> = ({ summary, selectedDate }) => {
+export const KpiCardsGrid: React.FC<KpiCardsGridProps> = ({ summary, selectedPeriod, loading = false }) => {
   const formatCurrency = (val?: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -18,12 +19,33 @@ export const KpiCardsGrid: React.FC<KpiCardsGridProps> = ({ summary, selectedDat
 
   const monthName = summary?.month || 'Mês Selecionado';
 
-  const balanceFooter = selectedDate
-    ? `Saldo em ${new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(selectedDate + 'T12:00:00'))}`
+  const balanceFooter = selectedPeriod
+    ? (() => {
+        const [yearStr, monthStr] = selectedPeriod.split('-');
+        const formatted = new Intl.DateTimeFormat('pt-BR', {
+          month: 'long',
+          year: 'numeric',
+        }).format(new Date(Number(yearStr), Number(monthStr) - 1, 1));
+        return `Saldo ao final de ${formatted}`;
+      })()
     : 'Soma dos saldos bancários';
 
+  if (loading && !summary) {
+    return (
+      <section className="kpi-grid" aria-busy="true" aria-label="Carregando resumo">
+        {[0, 1, 2].map((idx) => (
+          <Card key={idx} className="kpi-card">
+            <div className="skeleton skeleton-text" />
+            <div className="skeleton skeleton-value" />
+            <div className="skeleton skeleton-text" />
+          </Card>
+        ))}
+      </section>
+    );
+  }
+
   return (
-    <section className="kpi-grid">
+    <section className="kpi-grid" aria-busy={loading}>
       <Card className="kpi-card">
         <div className="kpi-header">
           <span>Saldo Total em Conta</span>
