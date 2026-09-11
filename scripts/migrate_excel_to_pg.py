@@ -5,6 +5,7 @@ import datetime
 import os
 import pathlib
 import sys
+import zipfile
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict
 
@@ -29,7 +30,44 @@ from app.infra.db.models import (
     TransactionType,
     TransactionStatus,
 )
-from app.excel_engine import get_excel_path
+# Script de migração única (one-shot) da planilha legada para o PostgreSQL.
+# A aplicação em runtime não usa mais a planilha local (ver app/main.py);
+# este helper existe apenas para localizar o arquivo de origem da migração.
+LEGACY_EXCEL_PATH = pathlib.Path(__file__).resolve().parent.parent / "app" / "data" / "controle_financeiro.xlsx"
+LEGACY_FALLBACK_ONEDRIVE_PATH = pathlib.Path(r"C:\Users\ndala\OneDrive\Documentos\Financeiro\controle_financeiro.xlsx")
+
+
+def get_excel_path() -> pathlib.Path:
+    """Resolve o caminho da planilha legada usada como fonte da migração única."""
+    import os as _os
+
+    p = LEGACY_EXCEL_PATH
+    if p.is_symlink():
+        try:
+            target = pathlib.Path(_os.readlink(p))
+            if target.exists():
+                return target.resolve()
+        except Exception:
+            pass
+
+    if p.is_file():
+        try:
+            content = p.read_text(encoding="utf-8", errors="ignore").strip()
+            if content and (content.endswith(".xlsx") or "Financeiro" in content):
+                clean_path = content.replace("\\\\?\\", "").strip()
+                target = pathlib.Path(clean_path)
+                if target.exists():
+                    return target.resolve()
+        except Exception:
+            pass
+
+        if zipfile.is_zipfile(p):
+            return p.resolve()
+
+    if LEGACY_FALLBACK_ONEDRIVE_PATH.exists():
+        return LEGACY_FALLBACK_ONEDRIVE_PATH.resolve()
+
+    return p.resolve()
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",

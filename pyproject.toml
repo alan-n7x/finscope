@@ -1,7 +1,7 @@
 [project]
 name = "finscope"
 version = "0.2.0"
-description = "Controle financeiro pessoal orientado a planilha Excel com FastAPI"
+description = "Controle financeiro pessoal com FastAPI e PostgreSQL como fonte única de verdade"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [

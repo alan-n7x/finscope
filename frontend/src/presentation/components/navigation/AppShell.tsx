@@ -7,7 +7,7 @@ import {
   CreditCard,
   Plus,
   Wallet,
-  FileSpreadsheet,
+  Database,
 } from 'lucide-react';
 import { NewTransactionModal } from '../../features/transactions/NewTransactionModal';
 import { useCreateTransaction } from '../../../application/hooks/useTransactions';
@@ -29,7 +29,7 @@ export const AppShell: React.FC = () => {
 
   const handleCreate = async (dto: CreateTransactionDTO) => {
     await createTx.mutateAsync(dto);
-    setToast('✅ Lançamento salvo na planilha!');
+    setToast('Lançamento salvo!');
     setTimeout(() => setToast(null), 4000);
   };
 
@@ -69,8 +69,8 @@ export const AppShell: React.FC = () => {
             <span className="nav-item-label">Novo Lançamento</span>
           </button>
           <div className="nav-status">
-            <FileSpreadsheet size={14} />
-            <span className="nav-item-label">Planilha Local</span>
+            <Database size={14} />
+            <span className="nav-item-label">PostgreSQL</span>
           </div>
         </div>
       </aside>
