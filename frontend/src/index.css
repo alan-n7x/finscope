@@ -1258,6 +1258,58 @@ h2 {
   border-radius: 12px;
 }
 
+/* Daily limit card */
+.daily-limit-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.daily-limit-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.daily-bar {
+  height: 10px;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.15);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.daily-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: var(--primary);
+  transition: width 0.3s ease;
+}
+
+.daily-bar-fill.warning {
+  background: #f59e0b;
+}
+
+.daily-bar-fill.exceeded {
+  background: #f43f5e;
+}
+
+.daily-limit-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.skeleton-bar {
+  height: 10px;
+  width: 100%;
+}
+
 .sidebar-full {
   max-width: 640px;
   width: 100%;

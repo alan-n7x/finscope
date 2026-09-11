@@ -27,6 +27,12 @@ export class ApiDashboardRepository implements IDashboardRepository {
       reserve_min: data.reserve_min,
       free_after_reserve: data.free_after_reserve,
       accounts,
+      recommended_per_day: data.recommended_per_day ?? 0,
+      spent_today: data.spent_today ?? 0,
+      remaining_today: data.remaining_today ?? 0,
+      days_remaining: data.days_remaining ?? 0,
+      free_balance: data.free_balance ?? 0,
+      status: data.status ?? 'NORMAL',
     });
   }
 

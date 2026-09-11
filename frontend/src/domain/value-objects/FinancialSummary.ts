@@ -11,6 +11,12 @@ export interface FinancialSummaryProps {
   reserve_min: number;
   free_after_reserve: number;
   accounts: Account[];
+  recommended_per_day: number;
+  spent_today: number;
+  remaining_today: number;
+  days_remaining: number;
+  free_balance: number;
+  status: 'NORMAL' | 'WARNING' | 'EXCEEDED';
 }
 
 export class FinancialSummary {
@@ -30,4 +36,10 @@ export class FinancialSummary {
   get reserve_min(): number { return this.props.reserve_min; }
   get free_after_reserve(): number { return this.props.free_after_reserve; }
   get accounts(): Account[] { return this.props.accounts; }
+  get recommended_per_day(): number { return this.props.recommended_per_day ?? 0; }
+  get spent_today(): number { return this.props.spent_today ?? 0; }
+  get remaining_today(): number { return this.props.remaining_today ?? 0; }
+  get days_remaining(): number { return this.props.days_remaining ?? 0; }
+  get free_balance(): number { return this.props.free_balance ?? 0; }
+  get status(): 'NORMAL' | 'WARNING' | 'EXCEEDED' { return this.props.status ?? 'NORMAL'; }
 }

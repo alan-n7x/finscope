@@ -20,6 +20,7 @@ from app.infra.db.models import (
     TransactionType,
     TransactionStatus,
 )
+from app.services.daily_limit import compute_daily_limit
 
 
 class FinanceRepository:
@@ -165,6 +166,36 @@ class FinanceRepository:
         projected_final = total_balance + income_month - expense_month
         free_after_reserve = projected_final - reserve_min
 
+        # 3. Limite diario recomendado (compromissos pendentes do mes alvo)
+        pending_stmt = select(
+            func.coalesce(func.sum(Transaction.amount), Decimal("0.00"))
+        ).where(
+            Transaction.type == TransactionType.EXPENSE,
+            Transaction.status == TransactionStatus.PENDING,
+            Transaction.date >= start_date,
+            Transaction.date < end_date,
+        )
+        pending_res = await self.session.execute(pending_stmt)
+        pending_month = pending_res.scalar_one()
+
+        spent_day_stmt = select(
+            func.coalesce(func.sum(Transaction.amount), Decimal("0.00"))
+        ).where(
+            Transaction.type == TransactionType.EXPENSE,
+            Transaction.status == TransactionStatus.POSTED,
+            Transaction.date == ref_date,
+        )
+        spent_day_res = await self.session.execute(spent_day_stmt)
+        spent_ref_day = spent_day_res.scalar_one()
+
+        daily_limit = compute_daily_limit(
+            total_balance=float(total_balance),
+            pending_month=float(pending_month),
+            spent_ref_day=float(spent_ref_day),
+            ref_date=ref_date,
+            target_month=target_month,
+        )
+
         return {
             "month": target_month,
             "ref_date": ref_date.isoformat(),
@@ -176,6 +207,7 @@ class FinanceRepository:
             "reserve_min": round(float(reserve_min), 2),
             "free_after_reserve": round(float(free_after_reserve), 2),
             "accounts": accounts_list,
+            **daily_limit,
         }
 
     async def get_filter_options(self) -> dict[str, Any]:
