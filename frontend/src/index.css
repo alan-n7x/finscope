@@ -68,6 +68,22 @@ body {
   box-shadow: var(--shadow);
 }
 
+/* Interacao unica dos cards: hover sutil, sem alterar geometria.
+   Aplicar via classe opt-in para nao afetar paineis de outras paginas. */
+.card-interactive {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-interactive:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 14px 36px -12px rgba(0, 0, 0, 0.6);
+}
+
+.card-interactive:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 /* ─── HEADER ────────────────────────────────────────── */
 .app-header {
   display: flex;
@@ -211,12 +227,6 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  transition: var(--transition);
-}
-
-.kpi-card:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  transform: translateY(-2px);
 }
 
 .kpi-header {
@@ -1582,12 +1592,8 @@ h2 {
     animation: none;
   }
 
-  .kpi-card,
+  .card-interactive,
   .daily-bar-fill {
     transition: none;
-  }
-
-  .kpi-card:hover {
-    transform: none;
   }
 }
