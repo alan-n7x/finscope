@@ -46,7 +46,7 @@ export const DailyLimitCard: React.FC<DailyLimitCardProps> = ({ summary, loading
 
   return (
     <section className="section-container">
-      <Card className="kpi-card card-interactive">
+      <Card className="kpi-card card-hover">
         <div className="kpi-header">
           <span>Limite Diário Recomendado</span>
           <span className={`badge ${meta.className}`}>{meta.label}</span>

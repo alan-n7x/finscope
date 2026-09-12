@@ -38,7 +38,7 @@ export const CategoryDonutChart: React.FC<CategoryDonutChartProps> = ({ data, to
   }
 
   return (
-    <div className="chart-card glass-panel">
+    <div className="chart-card glass-panel card-hover">
       <div className="chart-header">
         <h3>Gastos por Categoria</h3>
         <span className="chart-subtitle">Total: {formatCurrency(totalExpenses)}</span>

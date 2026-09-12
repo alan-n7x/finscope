@@ -82,7 +82,7 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading = fa
       <div className="section-header" style={{ marginBottom: '14px' }}>
         <h2>Saldo ao longo do mês</h2>
       </div>
-      <div className="chart-card glass-panel card-interactive">
+      <div className="chart-card glass-panel card-hover">
         <div className="chart-header">
           <h3>Realizado vs projetado</h3>
           <span className="chart-subtitle">
