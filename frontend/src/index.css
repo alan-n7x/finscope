@@ -1259,20 +1259,6 @@ h2 {
 }
 
 /* Daily limit card */
-.daily-limit-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.daily-limit-value {
-  font-size: 1.6rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
 .daily-bar {
   height: 10px;
   border-radius: 6px;
@@ -1294,15 +1280,6 @@ h2 {
 
 .daily-bar-fill.exceeded {
   background: #f43f5e;
-}
-
-.daily-limit-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 0.78rem;
-  color: var(--text-muted);
 }
 
 .skeleton-bar {
@@ -1598,3 +1575,19 @@ h2 {
   margin-top: var(--space-md);
 }
 
+
+/* Acessibilidade: respeita preferencia por movimento reduzido */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+
+  .kpi-card,
+  .daily-bar-fill {
+    transition: none;
+  }
+
+  .kpi-card:hover {
+    transform: none;
+  }
+}

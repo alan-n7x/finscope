@@ -24,7 +24,7 @@ export const DailyLimitCard: React.FC<DailyLimitCardProps> = ({ summary, loading
   if (loading && !summary) {
     return (
       <section className="section-container" aria-busy="true" aria-label="Carregando limite diário">
-        <Card>
+        <Card className="kpi-card">
           <div className="skeleton skeleton-text" />
           <div className="skeleton skeleton-value" />
           <div className="skeleton skeleton-bar" />
@@ -46,23 +46,17 @@ export const DailyLimitCard: React.FC<DailyLimitCardProps> = ({ summary, loading
 
   return (
     <section className="section-container">
-      <div className="section-header" style={{ marginBottom: '14px' }}>
-        <h2>Limite Diário Recomendado</h2>
-        <span className={`badge ${meta.className}`}>{meta.label}</span>
-      </div>
-      <Card>
-        <div className="daily-limit-top">
-          <div className="daily-limit-value">{formatCurrency(recommended)}/dia</div>
-          <span className="month-pill">
-            {days} {days === 1 ? 'dia restante' : 'dias restantes'}
-          </span>
+      <Card className="kpi-card">
+        <div className="kpi-header">
+          <span>Limite Diário Recomendado</span>
+          <span className={`badge ${meta.className}`}>{meta.label}</span>
         </div>
-        <div className="daily-bar" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
+        <div className="kpi-value">{formatCurrency(recommended)}/dia</div>
+        <div className="daily-bar" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Progresso do gasto de hoje">
           <div className={barClass} style={{ width: `${Math.round(progress * 100)}%` }} />
         </div>
-        <div className="daily-limit-footer">
-          <span>Gasto hoje: {formatCurrency(spent)}</span>
-          <span>Restam hoje: {formatCurrency(remaining)}</span>
+        <div className="kpi-footer">
+          Gasto hoje: {formatCurrency(spent)} · Restam hoje: {formatCurrency(remaining)} · {days} {days === 1 ? 'dia restante' : 'dias restantes'}
         </div>
       </Card>
     </section>
