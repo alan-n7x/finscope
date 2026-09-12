@@ -74,11 +74,17 @@ class CashFlowDay(BaseModel):
     cumulative_income: float
     cumulative_expense: float
     net: float
+    realized_balance: float | None = None
+    projected_balance: float | None = None
 
 
 class CashFlowResponse(BaseModel):
     month: str
     days: list[CashFlowDay]
+    transition_date: str | None = None
+    start_balance: float = 0
+    final_projected_balance: float = 0
+    has_projection: bool = False
 
 
 class FilterOptionsResponse(BaseModel):
