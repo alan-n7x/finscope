@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useDashboard } from '../../application/hooks/useDashboard';
+import { useCashFlow } from '../../application/hooks/useCashFlow';
 import { KpiCardsGrid } from '../features/dashboard/KpiCardsGrid';
+import { CashFlowChart } from '../features/dashboard/CashFlowChart';
 import { AccountsGrid } from '../features/dashboard/AccountsGrid';
 import { PeriodSelector, currentPeriod } from '../features/dashboard/PeriodSelector';
 import { DailyLimitCard } from '../features/dashboard/DailyLimitCard';
@@ -8,6 +10,7 @@ import { DailyLimitCard } from '../features/dashboard/DailyLimitCard';
 export const DashboardPage: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState(currentPeriod());
   const { data: dashboardData, isLoading, isFetching } = useDashboard(selectedPeriod);
+  const { data: cashFlow, isLoading: cashFlowLoading } = useCashFlow(selectedPeriod);
 
   const loading = isLoading || isFetching;
   const summary = dashboardData?.summary;
@@ -30,6 +33,8 @@ export const DashboardPage: React.FC = () => {
       <KpiCardsGrid summary={summary} selectedPeriod={selectedPeriod} loading={loading} />
 
       {!isEmpty && <DailyLimitCard summary={summary} loading={loading} />}
+
+      {!isEmpty && <CashFlowChart data={cashFlow} loading={cashFlowLoading} />}
 
       {isEmpty ? (
         <div className="empty-state">Nenhum lançamento neste mês.</div>

@@ -15,6 +15,7 @@ from app.infra.repositories.finance_repository import FinanceRepository
 from app.services.excel_export_service import ExcelExportService
 from app.services.transaction_service import TransactionService
 from app.schemas import (
+    CashFlowResponse,
     DashboardSummaryResponse,
     DebtItem,
     FilterOptionsResponse,
@@ -136,6 +137,17 @@ async def list_debts(
     repo = FinanceRepository(session)
     debts = await repo.list_debts()
     return [DebtItem(**d) for d in debts]
+
+
+@app.get("/api/dashboard/cash-flow", response_model=CashFlowResponse)
+async def get_cash_flow(
+    month: str | None = Query(default=None, description="Mes no formato YYYY-MM"),
+    date: str | None = Query(default=None, description="Data de referencia no formato YYYY-MM-DD"),
+    session: AsyncSession = Depends(get_db_session)
+) -> CashFlowResponse:
+    repo = FinanceRepository(session)
+    cash_flow = await repo.get_cash_flow(month=month, date=date)
+    return CashFlowResponse(**cash_flow)
 
 
 # ============================================================================

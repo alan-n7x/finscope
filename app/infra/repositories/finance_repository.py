@@ -335,3 +335,77 @@ class FinanceRepository:
                 "status": d.status.value if hasattr(d.status, "value") else str(d.status),
             })
         return results
+
+    async def get_cash_flow(
+        self, month: Optional[str] = None, date: Optional[str] = None
+    ) -> dict[str, Any]:
+        """Agrega lancamentos confirmados por dia do mes alvo.
+
+        Retorna um ponto por dia (1..ultimo dia), com entradas/saidas do dia
+        e acumulados no mes. Transferencias nao entram no fluxo.
+        """
+        today = datetime.date.today()
+        if date:
+            try:
+                ref = datetime.date.fromisoformat(date)
+            except ValueError:
+                ref = today
+            target_month = ref.strftime("%Y-%m")
+        elif month:
+            try:
+                datetime.date(int(month.split("-")[0]), int(month.split("-")[1]), 1)
+                target_month = month
+            except (ValueError, IndexError, AttributeError):
+                target_month = today.strftime("%Y-%m")
+        else:
+            target_month = today.strftime("%Y-%m")
+
+        year, mon = int(target_month.split("-")[0]), int(target_month.split("-")[1])
+        start_date = datetime.date(year, mon, 1)
+        if mon == 12:
+            end_date = datetime.date(year + 1, 1, 1)
+        else:
+            end_date = datetime.date(year, mon + 1, 1)
+        last_day = (end_date - datetime.timedelta(days=1)).day
+
+        stmt = (
+            select(
+                Transaction.date,
+                Transaction.type,
+                func.coalesce(func.sum(Transaction.amount), Decimal("0.00")),
+            )
+            .where(
+                Transaction.status == TransactionStatus.POSTED,
+                Transaction.type.in_([TransactionType.INCOME, TransactionType.EXPENSE]),
+                Transaction.date >= start_date,
+                Transaction.date < end_date,
+            )
+            .group_by(Transaction.date, Transaction.type)
+        )
+        res = await self.session.execute(stmt)
+
+        per_day: dict[str, dict[str, float]] = {}
+        for tx_date, tx_type, total in res.all():
+            key = tx_date.isoformat()
+            bucket = per_day.setdefault(key, {"income": 0.0, "expense": 0.0})
+            bucket["income" if tx_type == TransactionType.INCOME else "expense"] = float(total)
+
+        days = []
+        acc_income = 0.0
+        acc_expense = 0.0
+        for day in range(1, last_day + 1):
+            d = datetime.date(year, mon, day)
+            bucket = per_day.get(d.isoformat(), {"income": 0.0, "expense": 0.0})
+            acc_income = round(acc_income + bucket["income"], 2)
+            acc_expense = round(acc_expense + bucket["expense"], 2)
+            days.append({
+                "day": day,
+                "date": d.isoformat(),
+                "income": round(bucket["income"], 2),
+                "expense": round(bucket["expense"], 2),
+                "cumulative_income": acc_income,
+                "cumulative_expense": acc_expense,
+                "net": round(acc_income - acc_expense, 2),
+            })
+
+        return {"month": target_month, "days": days}

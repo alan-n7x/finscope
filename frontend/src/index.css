@@ -1310,6 +1310,11 @@ h2 {
   width: 100%;
 }
 
+.skeleton-chart {
+  height: 200px;
+  width: 100%;
+}
+
 .sidebar-full {
   max-width: 640px;
   width: 100%;
