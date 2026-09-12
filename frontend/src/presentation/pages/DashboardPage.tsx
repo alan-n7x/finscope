@@ -34,7 +34,9 @@ export const DashboardPage: React.FC = () => {
 
       {!isEmpty && <DailyLimitCard summary={summary} loading={loading} />}
 
-      {!isEmpty && <CashFlowChart data={cashFlow} loading={cashFlowLoading} />}
+      {(!isEmpty || (cashFlow?.has_projection ?? false) || cashFlowLoading) && (
+        <CashFlowChart data={cashFlow} loading={cashFlowLoading} />
+      )}
 
       {isEmpty ? (
         <div className="empty-state">Nenhum lançamento neste mês.</div>
