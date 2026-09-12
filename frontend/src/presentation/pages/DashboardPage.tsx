@@ -3,6 +3,7 @@ import { useDashboard } from '../../application/hooks/useDashboard';
 import { KpiCardsGrid } from '../features/dashboard/KpiCardsGrid';
 import { AccountsGrid } from '../features/dashboard/AccountsGrid';
 import { PeriodSelector, currentPeriod } from '../features/dashboard/PeriodSelector';
+import { DailyLimitCard } from '../features/dashboard/DailyLimitCard';
 
 export const DashboardPage: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState(currentPeriod());
@@ -27,6 +28,8 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       <KpiCardsGrid summary={summary} selectedPeriod={selectedPeriod} loading={loading} />
+
+      {!isEmpty && <DailyLimitCard summary={summary} loading={loading} />}
 
       {isEmpty ? (
         <div className="empty-state">Nenhum lançamento neste mês.</div>

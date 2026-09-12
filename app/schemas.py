@@ -20,6 +20,12 @@ class DashboardSummaryResponse(BaseModel):
     reserve_min: float
     free_after_reserve: float
     accounts: list[AccountSummary]
+    recommended_per_day: float = 0
+    spent_today: float = 0
+    remaining_today: float = 0
+    days_remaining: int = 0
+    free_balance: float = 0
+    status: str = "NORMAL"
 
 
 class TransactionItem(BaseModel):
