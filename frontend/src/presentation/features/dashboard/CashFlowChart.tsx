@@ -51,11 +51,13 @@ export const CashFlowChart: React.FC<CashFlowChartProps> = ({ data, loading = fa
   const showTransition =
     transitionDay !== null && lastDay !== null && transitionDay < lastDay.day && (data?.has_projection ?? false);
 
-  const ariaSummary = data
-    ? `Saldo realizado até dia ${transitionDay ?? lastDay?.day} de ${formatCurrency(
-        transitionDay !== null ? days[transitionDay - 1]?.realized_balance : lastDay?.realized_balance
-      )}, projeção de ${formatCurrency(data.final_projected_balance)} ao fim do mês.`
-    : 'Sem dados de saldo.';
+  const ariaSummary = !data
+    ? 'Sem dados de saldo.'
+    : transitionDay === null
+      ? `Sem dias confirmados no período. Projeção de ${formatCurrency(data.final_projected_balance)} ao fim do mês.`
+      : `Saldo realizado até dia ${transitionDay} de ${formatCurrency(
+          days[transitionDay - 1]?.realized_balance
+        )}, projeção de ${formatCurrency(data.final_projected_balance)} ao fim do mês.`;
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
