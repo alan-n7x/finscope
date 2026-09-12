@@ -66,6 +66,21 @@ class DebtItem(BaseModel):
     status: str
 
 
+class CashFlowDay(BaseModel):
+    day: int
+    date: str
+    income: float
+    expense: float
+    cumulative_income: float
+    cumulative_expense: float
+    net: float
+
+
+class CashFlowResponse(BaseModel):
+    month: str
+    days: list[CashFlowDay]
+
+
 class FilterOptionsResponse(BaseModel):
     categories: list[str]
     payment_methods: list[str]
