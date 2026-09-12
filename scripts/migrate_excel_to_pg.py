@@ -34,7 +34,14 @@ from app.infra.db.models import (
 # A aplicação em runtime não usa mais a planilha local (ver app/main.py);
 # este helper existe apenas para localizar o arquivo de origem da migração.
 LEGACY_EXCEL_PATH = pathlib.Path(__file__).resolve().parent.parent / "app" / "data" / "controle_financeiro.xlsx"
-LEGACY_FALLBACK_ONEDRIVE_PATH = pathlib.Path(r"C:\Users\ndala\OneDrive\Documentos\Financeiro\controle_financeiro.xlsx")
+# Caminho opcional da planilha legada em outra maquina (ex: Windows com OneDrive).
+# Configure via env FINSCOPE_LEGACY_EXCEL_PATH; o valor default abaixo e apenas um placeholder.
+LEGACY_FALLBACK_ONEDRIVE_PATH = pathlib.Path(
+    os.getenv(
+        "FINSCOPE_LEGACY_EXCEL_PATH",
+        r"C:\Users\Public\Documents\Financeiro\controle_financeiro.xlsx",
+    )
+)
 
 
 def get_excel_path() -> pathlib.Path:

@@ -14,8 +14,8 @@ Antes de alterar qualquer coisa, leia:
 
 ## Arquivo oficial e link simbólico
 
-- Arquivo real: `C:\Users\ndala\OneDrive\Documentos\Financeiro\controle_financeiro.xlsx`
-- Caminho usado pela aplicação: `E:\Developer\finscope\app\data\database.xlsx`
+- Arquivo real: `<SUA_PASTA>/OneDrive/Documentos/Financeiro/controle_financeiro.xlsx`
+- Caminho usado pela aplicação: `<SEU_PROJETO>/finscope/app/data/database.xlsx`
 - `database.xlsx` é um link simbólico para o arquivo real.
 
 Regras obrigatórias:
@@ -23,7 +23,7 @@ Regras obrigatórias:
 - Preservar o link simbólico; não substituí-lo por uma cópia comum.
 - Confirmar o destino do link antes e depois de qualquer edição.
 - Se precisar criar temporários, usar somente:
-  `E:\Developer\finscope\app\data\.codex_spreadsheet_tmp`
+  `<SEU_PROJETO>/finscope/app/data/.codex_spreadsheet_tmp`
 - Remover temporários ao terminar.
 - Não criar arquivos `.ndjson`, previews ou scripts permanentes ao lado do Excel.
 - Não sobrescrever mudanças do usuário sem antes inspecionar o estado atual.
