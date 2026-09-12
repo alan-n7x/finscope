@@ -21,6 +21,7 @@ from app.infra.db.models import (
     TransactionStatus,
 )
 from app.services.daily_limit import compute_daily_limit
+from app.services.cash_balance import compute_cash_balance
 
 
 class FinanceRepository:
@@ -339,10 +340,13 @@ class FinanceRepository:
     async def get_cash_flow(
         self, month: Optional[str] = None, date: Optional[str] = None
     ) -> dict[str, Any]:
-        """Agrega lancamentos confirmados por dia do mes alvo.
+        """Agrega lancamentos por dia do mes alvo com saldo realizado/projetado.
 
-        Retorna um ponto por dia (1..ultimo dia), com entradas/saidas do dia
-        e acumulados no mes. Transferencias nao entram no fluxo.
+        Mantem os campos historicos (entradas/saidas confirmadas por dia e
+        acumulados) e adiciona a serie de saldos: realized usa apenas
+        POSTED ate o dia de transicao; projected parte desse ponto e
+        incorpora PENDING pela data do lancamento. Transferencias nao
+        entram na serie.
         """
         today = datetime.date.today()
         if date:
@@ -368,6 +372,28 @@ class FinanceRepository:
             end_date = datetime.date(year, mon + 1, 1)
         last_day = (end_date - datetime.timedelta(days=1)).day
 
+        async def _net_by_day(status: TransactionStatus) -> dict[int, float]:
+            stmt = (
+                select(
+                    Transaction.date,
+                    func.coalesce(func.sum(
+                        case(
+                            (Transaction.type == TransactionType.INCOME, Transaction.amount),
+                            else_=-Transaction.amount,
+                        )
+                    ), Decimal("0.00")),
+                )
+                .where(
+                    Transaction.status == status,
+                    Transaction.type.in_([TransactionType.INCOME, TransactionType.EXPENSE]),
+                    Transaction.date >= start_date,
+                    Transaction.date < end_date,
+                )
+                .group_by(Transaction.date)
+            )
+            res = await self.session.execute(stmt)
+            return {tx_date.day: float(total) for tx_date, total in res.all()}
+
         stmt = (
             select(
                 Transaction.date,
@@ -390,6 +416,40 @@ class FinanceRepository:
             bucket = per_day.setdefault(key, {"income": 0.0, "expense": 0.0})
             bucket["income" if tx_type == TransactionType.INCOME else "expense"] = float(total)
 
+        # Ancora: saldo total na data de transicao (reutiliza o calculo
+        # oficial do dashboard via snapshots + ledger, sem duplicar logica).
+        # Mes futuro nao tem dia confirmado: ancora no saldo de hoje e toda
+        # a serie vira projecao.
+        summary = await self.get_dashboard_summary(month=month, date=date)
+        anchor_total = float(summary["total_balance"])
+        posted_net = await _net_by_day(TransactionStatus.POSTED)
+        pending_net = await _net_by_day(TransactionStatus.PENDING)
+        transition_date: str | None
+        if target_month > today.strftime("%Y-%m"):
+            transition_day = 0
+            transition_date = None
+            start_balance = round(anchor_total, 2)
+        else:
+            transition_day = min(today.day, last_day) if target_month == today.strftime("%Y-%m") else last_day
+            transition_date = datetime.date(year, mon, transition_day).isoformat()
+            posted_to_transition = round(sum(
+                net for day, net in posted_net.items() if day <= transition_day
+            ), 2)
+            start_balance = round(anchor_total - posted_to_transition, 2)
+
+        balance_series = compute_cash_balance(
+            start_balance=start_balance,
+            posted_net_by_day=posted_net,
+            pending_net_by_day=pending_net,
+            year=year,
+            month=mon,
+            transition_day=transition_day,
+        )
+        balance_by_day = {item["day"]: item for item in balance_series}
+        has_projection = any(
+            day > transition_day and net != 0.0 for day, net in pending_net.items()
+        )
+
         days = []
         acc_income = 0.0
         acc_expense = 0.0
@@ -398,6 +458,7 @@ class FinanceRepository:
             bucket = per_day.get(d.isoformat(), {"income": 0.0, "expense": 0.0})
             acc_income = round(acc_income + bucket["income"], 2)
             acc_expense = round(acc_expense + bucket["expense"], 2)
+            balance = balance_by_day[day]
             days.append({
                 "day": day,
                 "date": d.isoformat(),
@@ -406,6 +467,15 @@ class FinanceRepository:
                 "cumulative_income": acc_income,
                 "cumulative_expense": acc_expense,
                 "net": round(acc_income - acc_expense, 2),
+                "realized_balance": balance["realized_balance"],
+                "projected_balance": balance["projected_balance"],
             })
 
-        return {"month": target_month, "days": days}
+        return {
+            "month": target_month,
+            "days": days,
+            "transition_date": transition_date,
+            "start_balance": start_balance,
+            "final_projected_balance": balance_series[-1]["projected_balance"],
+            "has_projection": has_projection,
+        }
