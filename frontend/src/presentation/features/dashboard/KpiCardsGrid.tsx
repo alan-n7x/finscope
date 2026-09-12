@@ -46,7 +46,7 @@ export const KpiCardsGrid: React.FC<KpiCardsGridProps> = ({ summary, selectedPer
 
   return (
     <section className="kpi-grid" aria-busy={loading}>
-      <Card className="kpi-card">
+      <Card className="kpi-card card-interactive">
         <div className="kpi-header">
           <span>Saldo Total em Conta</span>
           <div className="kpi-icon balance-icon">
@@ -57,7 +57,7 @@ export const KpiCardsGrid: React.FC<KpiCardsGridProps> = ({ summary, selectedPer
         <div className="kpi-footer">{balanceFooter}</div>
       </Card>
 
-      <Card className="kpi-card">
+      <Card className="kpi-card card-interactive">
         <div className="kpi-header">
           <span>Receitas do Mês</span>
           <div className="kpi-icon income-icon">
@@ -68,7 +68,7 @@ export const KpiCardsGrid: React.FC<KpiCardsGridProps> = ({ summary, selectedPer
         <div className="kpi-footer">Entradas confirmadas em {monthName}</div>
       </Card>
 
-      <Card className="kpi-card">
+      <Card className="kpi-card card-interactive">
         <div className="kpi-header">
           <span>Despesas do Mês</span>
           <div className="kpi-icon expense-icon">
