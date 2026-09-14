@@ -12,9 +12,15 @@ export interface ImportTransaction {
   similarity_score?: number;
 }
 
+export interface BalanceSnapshot {
+  date: string;
+  balance: number;
+}
+
 export interface ImportPreviewResponse {
   transactions: ImportTransaction[];
   account_guess?: string;
+  snapshots?: BalanceSnapshot[];
 }
 
 export const useUploadExtrato = () => {
@@ -41,11 +47,11 @@ export const useUploadExtrato = () => {
 export const useConfirmImport = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (transactions: ImportTransaction[]) => {
+    mutationFn: async (payload: { transactions: ImportTransaction[]; snapshots?: BalanceSnapshot[] }) => {
       const res = await fetch('/api/transactions/import/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions }),
+        body: JSON.stringify(payload),
       });
       
       if (!res.ok) {

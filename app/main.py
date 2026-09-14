@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Query, File, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import text
+from sqlalchemy import text, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -182,16 +182,16 @@ async def upload_extrato(
     filename = file.filename.lower()
     
     if filename.endswith(".ofx"):
-        txs, account_guess = import_engine.parse_ofx(content)
+        txs, snapshots, account_guess = import_engine.parse_ofx(content)
     elif filename.endswith(".pdf"):
-        txs, account_guess = import_engine.parse_itau_pdf(content)
+        txs, snapshots, account_guess = import_engine.parse_itau_pdf(content)
     else:
         raise HTTPException(status_code=400, detail="Formato não suportado. Envie OFX ou PDF (Itaú).")
         
     db_txs = await FinanceRepository(session).list_transactions(limit=500)
     reconciled_txs = import_engine.reconcile_transactions(txs, db_txs)
     
-    return ImportPreviewResponse(transactions=reconciled_txs, account_guess=account_guess)
+    return ImportPreviewResponse(transactions=reconciled_txs, account_guess=account_guess, snapshots=snapshots)
 
 
 @app.post("/api/transactions/import/confirm")
@@ -200,6 +200,7 @@ async def confirm_import(
     session: AsyncSession = Depends(get_db_session),
 ):
     success_count = 0
+    snapshots_count = 0
     try:
         service = TransactionService(session)
         for t in payload.transactions:
@@ -221,12 +222,45 @@ async def confirm_import(
                 )
                 if created:
                     success_count += 1
+
+        # Create or update balance snapshots from SALDO DO DIA lines
+        account_name = "Itaú - Conta corrente"
+        if payload.snapshots:
+            from decimal import Decimal
+            from sqlalchemy import select
+            from app.infra.db.models import Account, AccountBalanceSnapshot
+
+            account = await session.scalar(
+                select(Account).where(func.lower(Account.name) == account_name.strip().lower())
+            )
+            if account:
+                for snap in payload.snapshots:
+                    snap_date = datetime.date.fromisoformat(snap.date)
+                    existing = await session.scalar(
+                        select(AccountBalanceSnapshot).where(
+                            AccountBalanceSnapshot.account_id == account.id,
+                            AccountBalanceSnapshot.snapshot_date == snap_date,
+                        )
+                    )
+                    if existing:
+                        existing.balance = Decimal(str(snap.balance))
+                    else:
+                        session.add(AccountBalanceSnapshot(
+                            account_id=account.id,
+                            snapshot_date=snap_date,
+                            balance=Decimal(str(snap.balance)),
+                        ))
+                    snapshots_count += 1
+
         await session.commit()
     except ValueError as exc:
         await session.rollback()
         raise HTTPException(status_code=422, detail=str(exc)) from exc
             
-    return {"message": f"Importação concluída. {success_count} itens adicionados."}
+    msg = f"Importação concluída. {success_count} itens adicionados."
+    if snapshots_count:
+        msg += f" {snapshots_count} saldos atualizados."
+    return {"message": msg}
 
 
 # ============================================================================
