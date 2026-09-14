@@ -6,10 +6,10 @@ import re
 from typing import List, Tuple
 from ofxparse import OfxParser
 
-from .schemas import ImportTransaction
+from .schemas import ImportTransaction, BalanceSnapshot
 
-def parse_ofx(file_bytes: bytes) -> Tuple[List[ImportTransaction], str]:
-    """Parses OFX file and returns a list of transactions and account guess."""
+def parse_ofx(file_bytes: bytes) -> Tuple[List[ImportTransaction], List[BalanceSnapshot], str]:
+    """Parses OFX file and returns a list of transactions, balance snapshots, and account guess."""
     ofx = OfxParser.parse(io.BytesIO(file_bytes))
     transactions = []
     
@@ -43,11 +43,12 @@ def parse_ofx(file_bytes: bytes) -> Tuple[List[ImportTransaction], str]:
         )
         transactions.append(t)
         
-    return transactions, account_guess
+    return transactions, [], account_guess
 
-def parse_itau_pdf(file_bytes: bytes) -> Tuple[List[ImportTransaction], str]:
+def parse_itau_pdf(file_bytes: bytes) -> Tuple[List[ImportTransaction], List[BalanceSnapshot], str]:
     """Parses an Itaú PDF bank statement."""
     transactions = []
+    snapshots = []
     with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
         for page in pdf.pages:
             text = page.extract_text()
@@ -64,7 +65,18 @@ def parse_itau_pdf(file_bytes: bytes) -> Tuple[List[ImportTransaction], str]:
                     desc = match.group(2).strip()
                     val_str = match.group(3).replace('.', '').replace(',', '.')
                     
+                    # Extract SALDO DO DIA lines as balance snapshots
                     if "SALDO" in desc.upper() or "SDO" in desc.upper():
+                        try:
+                            balance = float(val_str)
+                            d, m, y = date_str.split('/')
+                            iso_date = f"{y}-{m}-{d}"
+                            snapshots.append(BalanceSnapshot(
+                                date=iso_date,
+                                balance=balance,
+                            ))
+                        except ValueError:
+                            pass
                         continue
                         
                     try:
@@ -89,7 +101,7 @@ def parse_itau_pdf(file_bytes: bytes) -> Tuple[List[ImportTransaction], str]:
                     )
                     transactions.append(t)
                     
-    return transactions, "Itaú - Conta corrente"
+    return transactions, snapshots, "Itaú - Conta corrente"
 
 def reconcile_transactions(imported_txs: List[ImportTransaction], db_txs: List[dict]) -> List[ImportTransaction]:
     """

@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { UploadCloud, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useUploadExtrato, useConfirmImport } from '../../../application/hooks/useImport';
-import type { ImportTransaction } from '../../../application/hooks/useImport';
+import type { ImportTransaction, BalanceSnapshot } from '../../../application/hooks/useImport';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 
@@ -14,6 +14,7 @@ export const ImportExtratoModal: React.FC<ImportExtratoModalProps> = ({ isOpen, 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<ImportTransaction[]>([]);
   const [accountGuess, setAccountGuess] = useState<string>('');
+  const [snapshots, setSnapshots] = useState<BalanceSnapshot[]>([]);
 
   const uploadExtrato = useUploadExtrato();
   const confirmImport = useConfirmImport();
@@ -25,6 +26,7 @@ export const ImportExtratoModal: React.FC<ImportExtratoModalProps> = ({ isOpen, 
         const res = await uploadExtrato.mutateAsync(selected);
         setPreview(res.transactions);
         setAccountGuess(res.account_guess || 'Itaú - Conta corrente');
+        setSnapshots(res.snapshots || []);
       } catch (err) {
         alert('Erro ao processar arquivo.');
       }
@@ -49,9 +51,10 @@ export const ImportExtratoModal: React.FC<ImportExtratoModalProps> = ({ isOpen, 
     }));
     
     try {
-      await confirmImport.mutateAsync(toImport);
+      await confirmImport.mutateAsync({ transactions: toImport, snapshots });
       alert('Importação concluída!');
       setPreview([]);
+      setSnapshots([]);
       onClose();
     } catch (err) {
       alert('Erro ao confirmar importação.');

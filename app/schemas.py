@@ -1,4 +1,3 @@
-from typing import Any
 from pydantic import BaseModel, Field
 
 
@@ -106,9 +105,18 @@ class ImportTransaction(BaseModel):
     account: str | None = None
     similarity_score: float | None = None
 
+
+class BalanceSnapshot(BaseModel):
+    date: str
+    balance: float
+
+
 class ImportPreviewResponse(BaseModel):
     transactions: list[ImportTransaction]
     account_guess: str | None = None
+    snapshots: list[BalanceSnapshot] = []
+
 
 class ImportConfirmRequest(BaseModel):
     transactions: list[ImportTransaction]
+    snapshots: list[BalanceSnapshot] = []
