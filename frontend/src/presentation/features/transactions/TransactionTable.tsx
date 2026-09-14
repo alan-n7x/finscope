@@ -46,7 +46,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   };
 
   return (
-    <section className="transactions-section glass-panel">
+    <section className="transactions-section glass-panel card-hover">
       <div className="section-header-wrap">
         <h2>Extrato de Lançamentos</h2>
         <div className="filters-bar">

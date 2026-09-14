@@ -39,7 +39,7 @@ export const AccountsGrid: React.FC<AccountsGridProps> = ({ accounts = [], loadi
       </div>
       <div className="accounts-grid">
         {accounts.map((acc, idx) => (
-          <div key={idx} className="account-card card-interactive">
+          <div key={idx} className="account-card card-hover">
             <span className="account-name">
               {acc.name} ({acc.type})
             </span>

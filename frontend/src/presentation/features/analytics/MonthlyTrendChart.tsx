@@ -50,7 +50,7 @@ export const MonthlyTrendChart: React.FC<MonthlyTrendChartProps> = ({ summary })
   };
 
   return (
-    <div className="chart-card glass-panel">
+    <div className="chart-card glass-panel card-hover">
       <div className="chart-header">
         <h3>Comparativo Mensal (Entradas vs Saídas)</h3>
         <span className="chart-subtitle">Resumo de movimentações em R$</span>

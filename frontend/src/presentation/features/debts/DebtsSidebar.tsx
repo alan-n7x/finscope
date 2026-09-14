@@ -23,7 +23,7 @@ export const DebtsSidebar: React.FC<DebtsSidebarProps> = ({ debts, fullPage }) =
   };
 
   return (
-    <aside className={`sidebar-section glass-panel ${fullPage ? 'sidebar-full' : ''}`}>
+    <aside className={`sidebar-section glass-panel card-hover ${fullPage ? 'sidebar-full' : ''}`}>
       <div className="section-header">
         <h2>Dívidas & Compromissos</h2>
       </div>

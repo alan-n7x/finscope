@@ -22,6 +22,18 @@
   --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
   --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
+  /* Design tokens do padrao global de Cards */
+  --motion-duration-fast: 200ms;
+  --motion-easing-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --card-border: var(--border-color);
+  --card-border-hover: rgba(255, 255, 255, 0.15);
+  --card-shadow: var(--shadow);
+  --card-shadow-hover: 0 14px 36px -12px rgba(0, 0, 0, 0.6);
+  --card-surface-hover: linear-gradient(rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.025));
+  --card-transition: border-color var(--motion-duration-fast) var(--motion-easing-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+  --focus-ring-color: var(--primary);
+
   --space-xs: 8px;
   --space-sm: 12px;
   --space-md: 16px;
@@ -68,19 +80,25 @@ body {
   box-shadow: var(--shadow);
 }
 
-/* Interacao unica dos cards: hover sutil, sem alterar geometria.
-   Aplicar via classe opt-in para nao afetar paineis de outras paginas. */
-.card-interactive {
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+/* Padrao global de interacao dos Cards (Design System).
+   Hover de superficie: elevacao + borda + highlight sutil, sem alterar
+   geometria (sem transform/scale). Apenas resposta visual: nao adiciona
+   cursor pointer nem foco a Cards informativos.
+   Contrato para futuro Card clicavel: usar elemento <button> ou
+   role="button" com tabindex, cursor pointer e :active com elevacao
+   reduzida; o :focus-visible abaixo ja cobre o anel de foco. */
+.card-hover {
+  transition: var(--card-transition);
 }
 
-.card-interactive:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 14px 36px -12px rgba(0, 0, 0, 0.6);
+.card-hover:hover {
+  border-color: var(--card-border-hover);
+  box-shadow: var(--card-shadow-hover);
+  background-image: var(--card-surface-hover);
 }
 
-.card-interactive:focus-visible {
-  outline: 2px solid var(--primary);
+.card-hover:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
   outline-offset: 2px;
 }
 
@@ -1592,7 +1610,7 @@ h2 {
     animation: none;
   }
 
-  .card-interactive,
+  .card-hover,
   .daily-bar-fill {
     transition: none;
   }
