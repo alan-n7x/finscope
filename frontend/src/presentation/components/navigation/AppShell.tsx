@@ -6,11 +6,11 @@ import {
   BarChart2,
   CreditCard,
   Plus,
-  Wallet,
   Database,
   Menu,
   ChevronLeft,
 } from 'lucide-react';
+import { BrandLogo } from '../branding/BrandLogo';
 import { NewTransactionModal } from '../../features/transactions/NewTransactionModal';
 import { useCreateTransaction } from '../../../application/hooks/useTransactions';
 import { useFilterOptions } from '../../../application/hooks/useTransactions';
@@ -45,10 +45,7 @@ export const AppShell: React.FC = () => {
       {/* ── Desktop/Tablet Sidebar ── */}
       <aside className={`nav-sidebar ${!isSidebarCollapsed ? 'nav-sidebar--expanded' : ''}`}>
         <div className="nav-brand">
-          <div className="logo-icon">
-            <Wallet size={20} />
-          </div>
-          <span className="nav-brand-label">Finscope</span>
+          <BrandLogo compact={isSidebarCollapsed} />
           <button
             className="toggle-sidebar"
             onClick={toggleSidebar}

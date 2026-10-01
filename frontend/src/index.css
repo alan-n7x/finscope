@@ -123,17 +123,43 @@ body {
   min-width: 0;
 }
 
-.logo-icon {
+/* Brand logo: link to homepage. Swap identity in branding/brand.ts */
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+
+.brand-logo__mark {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary), var(--accent-blue));
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.brand-logo__name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.brand-logo--compact .brand-logo__name {
+  display: none;
+}
+
+.brand-logo--compact .brand-logo__mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
 }
 
 h1 {
@@ -832,11 +858,6 @@ h2 {
     font-size: 1.75rem;
   }
 
-  .logo-icon {
-    width: 46px;
-    height: 46px;
-  }
-
   .kpi-value {
     font-size: 1.75rem;
   }
@@ -921,21 +942,20 @@ h2 {
   padding: var(--space-xs) 4px;
 }
 
-/* Compact logo + toggle side by side in the 72px rail */
-.nav-sidebar:not(.nav-sidebar--expanded) .logo-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
+/* Center icons in the rail and drop ghost labels so nothing clips */
+.nav-sidebar:not(.nav-sidebar--expanded) .nav-item,
+.nav-sidebar:not(.nav-sidebar--expanded) .nav-fab-sidebar {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
 }
 
-.nav-sidebar:not(.nav-sidebar--expanded) .logo-icon svg {
-  width: 15px;
-  height: 15px;
+.nav-sidebar:not(.nav-sidebar--expanded) .nav-item-label {
+  display: none;
 }
 
-.nav-sidebar:not(.nav-sidebar--expanded) .toggle-sidebar {
-  margin-left: 0;
-  padding: 6px;
+.nav-sidebar:not(.nav-sidebar--expanded) .nav-status {
+  display: none;
 }
 
 .nav-brand {
@@ -946,18 +966,6 @@ h2 {
   margin-bottom: var(--space-sm);
   overflow: hidden;
   white-space: nowrap;
-}
-
-.nav-brand-label {
-  font-size: 1.1rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.nav-sidebar--expanded .nav-brand-label {
-  opacity: 1;
 }
 
 .nav-items {
