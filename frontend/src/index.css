@@ -123,17 +123,43 @@ body {
   min-width: 0;
 }
 
-.logo-icon {
+/* Brand logo: link to homepage. Swap identity in branding/brand.ts */
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+
+.brand-logo__mark {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--primary), var(--accent-blue));
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+}
+
+.brand-logo__name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.brand-logo--compact .brand-logo__name {
+  display: none;
+}
+
+.brand-logo--compact .brand-logo__mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
 }
 
 h1 {
@@ -830,11 +856,6 @@ h2 {
 
   h1 {
     font-size: 1.75rem;
-  }
-
-  .logo-icon {
-    width: 46px;
-    height: 46px;
   }
 
   .kpi-value {
