@@ -45,7 +45,10 @@ export const AppShell: React.FC = () => {
       {/* ── Desktop/Tablet Sidebar ── */}
       <aside className={`nav-sidebar ${!isSidebarCollapsed ? 'nav-sidebar--expanded' : ''}`}>
         <div className="nav-brand">
-          <BrandLogo compact={isSidebarCollapsed} />
+          <div className="logo-icon">
+            <Wallet size={20} />
+          </div>
+          <span className="nav-brand-label">Finscope</span>
           <button
             className="toggle-sidebar"
             onClick={toggleSidebar}

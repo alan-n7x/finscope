@@ -942,20 +942,21 @@ h2 {
   padding: var(--space-xs) 4px;
 }
 
-/* Center icons in the rail and drop ghost labels so nothing clips */
-.nav-sidebar:not(.nav-sidebar--expanded) .nav-item,
-.nav-sidebar:not(.nav-sidebar--expanded) .nav-fab-sidebar {
-  justify-content: center;
-  padding-left: 0;
-  padding-right: 0;
+/* Compact logo + toggle side by side in the 72px rail */
+.nav-sidebar:not(.nav-sidebar--expanded) .logo-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
 }
 
-.nav-sidebar:not(.nav-sidebar--expanded) .nav-item-label {
-  display: none;
+.nav-sidebar:not(.nav-sidebar--expanded) .logo-icon svg {
+  width: 15px;
+  height: 15px;
 }
 
-.nav-sidebar:not(.nav-sidebar--expanded) .nav-status {
-  display: none;
+.nav-sidebar:not(.nav-sidebar--expanded) .toggle-sidebar {
+  margin-left: 0;
+  padding: 6px;
 }
 
 .nav-brand {
@@ -966,6 +967,18 @@ h2 {
   margin-bottom: var(--space-sm);
   overflow: hidden;
   white-space: nowrap;
+}
+
+.nav-brand-label {
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.nav-sidebar--expanded .nav-brand-label {
+  opacity: 1;
 }
 
 .nav-items {
