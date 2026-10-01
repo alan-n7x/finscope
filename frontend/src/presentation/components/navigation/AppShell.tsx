@@ -45,7 +45,17 @@ export const AppShell: React.FC = () => {
       {/* ── Desktop/Tablet Sidebar ── */}
       <aside className={`nav-sidebar ${!isSidebarCollapsed ? 'nav-sidebar--expanded' : ''}`}>
         <div className="nav-brand">
-          <BrandLogo compact={isSidebarCollapsed} />
+          <div className="logo-icon">
+            <Wallet size={20} />
+          </div>
+          <span className="nav-brand-label">Finscope</span>
+          <button
+            className="toggle-sidebar"
+            onClick={toggleSidebar}
+            aria-label={isSidebarCollapsed ? 'Abrir menu lateral' : 'Fechar menu lateral'}
+          >
+            {isSidebarCollapsed ? <Menu size={18} /> : <ChevronLeft size={18} />}
+          </button>
         </div>
 
           <nav className="nav-items">
@@ -76,15 +86,6 @@ export const AppShell: React.FC = () => {
               <Database size={14} />
               <span className="nav-item-label">PostgreSQL</span>
             </div>
-            <button
-              className="toggle-sidebar toggle-sidebar--footer"
-              onClick={toggleSidebar}
-              aria-label={isSidebarCollapsed ? 'Abrir menu lateral' : 'Fechar menu lateral'}
-              aria-expanded={!isSidebarCollapsed}
-              title={isSidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}
-            >
-              {isSidebarCollapsed ? <Menu size={18} /> : <ChevronLeft size={18} />}
-            </button>
           </div>
         </aside>
 
