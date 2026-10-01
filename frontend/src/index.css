@@ -938,7 +938,7 @@ h2 {
 /* Collapsed rail: icons only. Hover must NOT expand (toggle owns the state),
    otherwise clicking the toggle while hovering shows no change. */
 .nav-sidebar:not(.nav-sidebar--expanded) .nav-brand {
-  gap: 4px;
+  justify-content: center;
   padding: var(--space-xs) 4px;
 }
 
@@ -1666,6 +1666,19 @@ h2 {
 .toggle-sidebar:hover {
   background: rgba(255, 255, 255, 0.07);
   transform: translateY(-2px);
+}
+
+/* Footer trigger (Ant Design convention): full-width bar when open,
+   centered icon in the rail. Same spot in both states. */
+.toggle-sidebar--footer {
+  margin-left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  border-top: 1px solid var(--border-color);
+  border-radius: 0;
 }
 
 /* Sidebar expanded state */
