@@ -8,6 +8,8 @@ import {
   Plus,
   Wallet,
   Database,
+  Menu,
+  ChevronLeft,
 } from 'lucide-react';
 import { NewTransactionModal } from '../../features/transactions/NewTransactionModal';
 import { useCreateTransaction } from '../../../application/hooks/useTransactions';
@@ -23,6 +25,7 @@ const navItems = [
 
 export const AppShell: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const { data: filterOptions } = useFilterOptions();
   const createTx = useCreateTransaction();
@@ -33,52 +36,70 @@ export const AppShell: React.FC = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
   return (
     <div className="shell">
-      {/* ── Desktop/Tablet Sidebar ── */}
-      <aside className="nav-sidebar">
-        <div className="nav-brand">
-          <div className="logo-icon">
-            <Wallet size={20} />
-          </div>
-          <span className="nav-brand-label">Finscope</span>
-        </div>
+      {/* ── Header ── */}
+      <header className="shell-header">
+        <button
+          className="toggle-sidebar"
+          onClick={toggleSidebar}
+          aria-label={isSidebarCollapsed ? 'Abrir menu lateral' : 'Fechar menu lateral'}
+        >
+          {isSidebarCollapsed ? <Menu size={24} /> : <ChevronLeft size={24} />}
+        </button>
+      </header>
 
-        <nav className="nav-items">
-          {navItems.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) =>
-                `nav-item ${isActive ? 'nav-item--active' : ''}`
-              }
+      {/* ── Body ── */}
+      <div className="shell-body">
+        {/* ── Desktop/Tablet Sidebar ── */}
+        <aside className={`nav-sidebar ${!isSidebarCollapsed ? 'nav-sidebar--expanded' : ''}`}>
+          <div className="nav-brand">
+            <div className="logo-icon">
+              <Wallet size={20} />
+            </div>
+            <span className="nav-brand-label">Finscope</span>
+          </div>
+
+          <nav className="nav-items">
+            {navItems.map(({ to, icon: Icon, label }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={to === '/'}
+                className={({ isActive }) =>
+                  `nav-item ${isActive ? 'nav-item--active' : ''}`
+                }
+              >
+                <Icon size={20} />
+                <span className="nav-item-label">{label}</span>
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="nav-footer">
+            <button
+              className="nav-fab-sidebar"
+              onClick={() => setIsModalOpen(true)}
             >
-              <Icon size={20} />
-              <span className="nav-item-label">{label}</span>
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="nav-footer">
-          <button
-            className="nav-fab-sidebar"
-            onClick={() => setIsModalOpen(true)}
-          >
-            <Plus size={18} />
-            <span className="nav-item-label">Novo Lançamento</span>
-          </button>
-          <div className="nav-status">
-            <Database size={14} />
-            <span className="nav-item-label">PostgreSQL</span>
+              <Plus size={18} />
+              <span className="nav-item-label">Novo Lançamento</span>
+            </button>
+            <div className="nav-status">
+              <Database size={14} />
+              <span className="nav-item-label">PostgreSQL</span>
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
 
-      {/* ── Main Content ── */}
-      <main className="shell-main">
-        <Outlet />
-      </main>
+        {/* ── Main Content ── */}
+        <main className="shell-main">
+          <Outlet />
+        </main>
+      </div>
 
       {/* ── Mobile Bottom Navigation Bar ── */}
       <nav className="bottom-nav">

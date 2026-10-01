@@ -1615,3 +1615,62 @@ h2 {
     transition: none;
   }
 }
+
+/* --- Sidebar toggle and header --- */
+.shell-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  background: rgba(15, 23, 42, 0.97);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-color);
+  padding: var(--space-sm) var(--space-xs);
+  gap: var(--space-sm);
+  z-index: 51;
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+}
+
+.toggle-sidebar {
+  background: none;
+  border: none;
+  color: var(--text-main);
+  cursor: pointer;
+  padding: var(--space-xs);
+  border-radius: var(--radius-sm);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.toggle-sidebar:hover {
+  background: rgba(255, 255, 255, 0.07);
+  transform: translateY(-2px);
+}
+
+/* Sidebar expanded state */
+.nav-sidebar--expanded {
+  width: 220px;
+}
+.nav-sidebar--expanded .nav-brand-label,
+.nav-sidebar--expanded .nav-item-label {
+  opacity: 1;
+}
+
+/* Keep hover transition smooth */
+.nav-sidebar {
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Adjust body layout to account for header */
+.shell-body {
+  display: flex;
+  flex: 1;
+  margin-top: 56px; /* same as header height */
+}
+
+/* Make shell a column to stack header and body */
+.shell {
+  flex-direction: column;
+}
