@@ -914,8 +914,28 @@ h2 {
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.nav-sidebar:hover {
-  width: 220px;
+/* Collapsed rail: icons only. Hover must NOT expand (toggle owns the state),
+   otherwise clicking the toggle while hovering shows no change. */
+.nav-sidebar:not(.nav-sidebar--expanded) .nav-brand {
+  gap: 4px;
+  padding: var(--space-xs) 4px;
+}
+
+/* Compact logo + toggle side by side in the 72px rail */
+.nav-sidebar:not(.nav-sidebar--expanded) .logo-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+
+.nav-sidebar:not(.nav-sidebar--expanded) .logo-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.nav-sidebar:not(.nav-sidebar--expanded) .toggle-sidebar {
+  margin-left: 0;
+  padding: 6px;
 }
 
 .nav-brand {
@@ -936,7 +956,7 @@ h2 {
   transition: opacity 0.2s ease;
 }
 
-.nav-sidebar:hover .nav-brand-label {
+.nav-sidebar--expanded .nav-brand-label {
   opacity: 1;
 }
 
@@ -978,7 +998,7 @@ h2 {
   transition: opacity 0.2s ease;
 }
 
-.nav-sidebar:hover .nav-item-label {
+.nav-sidebar--expanded .nav-item-label {
   opacity: 1;
 }
 
@@ -1490,6 +1510,12 @@ h2 {
   .shell-main {
     margin-left: 72px;
     padding-bottom: 0;
+    transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Shift content when sidebar is expanded so the fixed sidebar never overlays it */
+  .shell:has(.nav-sidebar--expanded) .shell-main {
+    margin-left: 220px;
   }
 
   .page-content {
@@ -1614,4 +1640,32 @@ h2 {
   .daily-bar-fill {
     transition: none;
   }
+}
+
+/* --- Sidebar toggle --- */
+.toggle-sidebar {
+  background: none;
+  border: none;
+  color: var(--text-main);
+  cursor: pointer;
+  padding: var(--space-xs);
+  border-radius: var(--radius-sm);
+  transition: background 0.2s, transform 0.2s;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.toggle-sidebar:hover {
+  background: rgba(255, 255, 255, 0.07);
+  transform: translateY(-2px);
+}
+
+/* Sidebar expanded state */
+.nav-sidebar--expanded {
+  width: 220px;
+}
+
+/* Keep hover transition smooth */
+.nav-sidebar {
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
