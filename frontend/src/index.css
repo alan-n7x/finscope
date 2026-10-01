@@ -914,8 +914,19 @@ h2 {
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.nav-sidebar:hover {
-  width: 220px;
+/* Collapsed rail: icons only. Hover must NOT expand (toggle owns the state),
+   otherwise clicking the toggle while hovering shows no change. */
+.nav-sidebar:not(.nav-sidebar--expanded) .logo-icon {
+  display: none;
+}
+
+.nav-sidebar:not(.nav-sidebar--expanded) .nav-brand {
+  justify-content: center;
+  padding: var(--space-xs) 0;
+}
+
+.nav-sidebar:not(.nav-sidebar--expanded) .toggle-sidebar {
+  margin-left: 0;
 }
 
 .nav-brand {
@@ -936,7 +947,7 @@ h2 {
   transition: opacity 0.2s ease;
 }
 
-.nav-sidebar:hover .nav-brand-label {
+.nav-sidebar--expanded .nav-brand-label {
   opacity: 1;
 }
 
@@ -978,7 +989,7 @@ h2 {
   transition: opacity 0.2s ease;
 }
 
-.nav-sidebar:hover .nav-item-label {
+.nav-sidebar--expanded .nav-item-label {
   opacity: 1;
 }
 
@@ -1490,6 +1501,12 @@ h2 {
   .shell-main {
     margin-left: 72px;
     padding-bottom: 0;
+    transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Shift content when sidebar is expanded so the fixed sidebar never overlays it */
+  .shell:has(.nav-sidebar--expanded) .shell-main {
+    margin-left: 220px;
   }
 
   .page-content {
@@ -1637,10 +1654,6 @@ h2 {
 /* Sidebar expanded state */
 .nav-sidebar--expanded {
   width: 220px;
-}
-.nav-sidebar--expanded .nav-brand-label,
-.nav-sidebar--expanded .nav-item-label {
-  opacity: 1;
 }
 
 /* Keep hover transition smooth */
