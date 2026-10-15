@@ -13,9 +13,13 @@ router = Router()
 settings = get_settings()
 
 def is_allowed(user_id: int) -> bool:
-    """
-    Checks if the user is authorized to use the bot.
-    If TELEGRAM_ALLOWED_USER_ID is set, only that user is allowed.
+    """Verifica se o usuário pode usar o bot (allowlist opcional por env).
+
+    Args:
+        user_id: Id do remetente no Telegram.
+
+    Returns:
+        True quando `TELEGRAM_ALLOWED_USER_ID` está vazio ou coincide.
     """
     if settings.telegram_allowed_user_id:
         return user_id == settings.telegram_allowed_user_id
@@ -23,9 +27,10 @@ def is_allowed(user_id: int) -> bool:
 
 @router.message(Command("start"))
 async def cmd_start(message: Message) -> None:
-    """
-    Handles the /start command.
-    Welcomes the user and explains how to use the bot.
+    """Responde ao /start com boas-vindas e o formato de lançamento rápido.
+
+    Args:
+        message: Mensagem do comando recebido.
     """
     if not is_allowed(message.from_user.id):
         await message.answer("Desculpe, você não tem permissão para usar este bot.")
@@ -44,10 +49,13 @@ async def cmd_start(message: Message) -> None:
 
 @router.message(F.text)
 async def process_transaction(message: Message) -> None:
-    """
-    Processes a generic text message containing a quick transaction.
-    Expects format: "<Valor> <Descrição>"
-    Example: "50.90 Almoço Padaria"
+    """Registra despesa a partir de texto no formato "<Valor> <Descrição>".
+
+    Exemplos: "50 Almoço", "12.50 Uber". Lançamento idempotente via
+    `external_id` telegram:chat:message.
+
+    Args:
+        message: Mensagem de texto com valor e descrição.
     """
     if not is_allowed(message.from_user.id):
         return

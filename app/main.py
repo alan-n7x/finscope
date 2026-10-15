@@ -34,6 +34,11 @@ except ImportError:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Gerencia bot do Telegram e pool do banco durante o ciclo de vida do app.
+
+    Args:
+        app: Instância FastAPI (não utilizada diretamente).
+    """
     if start_bot:
         await start_bot()
     try:
@@ -61,6 +66,14 @@ app.add_middleware(
 # ============================================================================
 @app.get("/health")
 async def health(session: AsyncSession = Depends(get_db_session)) -> dict[str, str]:
+    """Verifica disponibilidade do PostgreSQL.
+
+    Raises:
+        HTTPException: 503 quando o banco não responde.
+
+    Returns:
+        Status, engine e versão da aplicação.
+    """
     try:
         await session.execute(text("SELECT 1"))
     except SQLAlchemyError as exc:
@@ -81,6 +94,16 @@ async def get_dashboard(
     date: str | None = Query(default=None, description="Data de referencia no formato YYYY-MM-DD"),
     session: AsyncSession = Depends(get_db_session)
 ) -> DashboardSummaryResponse:
+    """Retorna saldos, agregados do mês e limite diário na referência dada.
+
+    Args:
+        month: Mês no formato YYYY-MM.
+        date: Data de referência no formato YYYY-MM-DD.
+        session: Sessão injetada pelo FastAPI.
+
+    Returns:
+        Resumo do dashboard conforme `DashboardSummaryResponse`.
+    """
     repo = FinanceRepository(session)
     summary = await repo.get_dashboard_summary(month=month, date=date)
     return DashboardSummaryResponse(**summary)
@@ -90,6 +113,14 @@ async def get_dashboard(
 async def get_options(
     session: AsyncSession = Depends(get_db_session)
 ) -> FilterOptionsResponse:
+    """Retorna opções distintas para os filtros da interface.
+
+    Args:
+        session: Sessão injetada pelo FastAPI.
+
+    Returns:
+        Categorias, formas de pagamento, contas, meses e tipos.
+    """
     repo = FinanceRepository(session)
     options = await repo.get_filter_options()
     return FilterOptionsResponse(**options)
@@ -104,6 +135,19 @@ async def list_transactions(
     limit: int = Query(default=200, le=500),
     session: AsyncSession = Depends(get_db_session)
 ) -> list[TransactionItem]:
+    """Lista lançamentos com filtros opcionais (mês, categoria, busca, status).
+
+    Args:
+        month: Mês no formato YYYY-MM.
+        category: Substring da categoria.
+        search: Substring da descrição/observações.
+        status: "Sim" (pago) ou "Não" (pendente).
+        limit: Máximo de itens (até 500).
+        session: Sessão injetada pelo FastAPI.
+
+    Returns:
+        Lançamentos serializados, mais recentes primeiro.
+    """
     repo = FinanceRepository(session)
     txs = await repo.list_transactions(
         month=month,
@@ -120,6 +164,18 @@ async def create_transaction(
     payload: TransactionCreate,
     session: AsyncSession = Depends(get_db_session)
 ) -> dict[str, Any]:
+    """Cria um lançamento manual no ledger (conta e categoria auto-resolvidas).
+
+    Args:
+        payload: Dados do lançamento (`TransactionCreate`).
+        session: Sessão injetada pelo FastAPI.
+
+    Raises:
+        HTTPException: 422 quando conta/tipo/data são inválidos.
+
+    Returns:
+        Lançamento criado, serializado.
+    """
     try:
         transaction, _ = await TransactionService(session).create(payload)
         await session.commit()
@@ -134,6 +190,14 @@ async def create_transaction(
 async def list_debts(
     session: AsyncSession = Depends(get_db_session)
 ) -> list[DebtItem]:
+    """Lista dívidas ordenadas pelo maior saldo devedor.
+
+    Args:
+        session: Sessão injetada pelo FastAPI.
+
+    Returns:
+        Dívidas serializadas.
+    """
     repo = FinanceRepository(session)
     debts = await repo.list_debts()
     return [DebtItem(**d) for d in debts]
@@ -145,6 +209,16 @@ async def get_cash_flow(
     date: str | None = Query(default=None, description="Data de referencia no formato YYYY-MM-DD"),
     session: AsyncSession = Depends(get_db_session)
 ) -> CashFlowResponse:
+    """Retorna o fluxo de caixa diário (realizado + projetado) do mês alvo.
+
+    Args:
+        month: Mês no formato YYYY-MM.
+        date: Data de referência no formato YYYY-MM-DD.
+        session: Sessão injetada pelo FastAPI.
+
+    Returns:
+        Série diária com transição realizado/projetado.
+    """
     repo = FinanceRepository(session)
     cash_flow = await repo.get_cash_flow(month=month, date=date)
     return CashFlowResponse(**cash_flow)
@@ -158,6 +232,18 @@ async def export_excel_report(
     month: str | None = Query(default=None),
     session: AsyncSession = Depends(get_db_session)
 ):
+    """Gera e baixa o relatório financeiro em .xlsx do mês (ou atual).
+
+    Args:
+        month: Mês no formato YYYY-MM.
+        session: Sessão injetada pelo FastAPI.
+
+    Raises:
+        HTTPException: 500 quando a geração do relatório falha.
+
+    Returns:
+        Stream do arquivo Excel para download.
+    """
     try:
         report_stream = await ExcelExportService.generate_financial_report(session, month=month)
         filename = f"finscope_relatorio_{month or datetime.date.today().strftime('%Y-%m')}.xlsx"
@@ -178,6 +264,18 @@ async def upload_extrato(
     file: UploadFile = File(...),
     session: AsyncSession = Depends(get_db_session),
 ) -> ImportPreviewResponse:
+    """Processa OFX ou PDF do Itaú e devolve o preview com conciliação.
+
+    Args:
+        file: Arquivo enviado (.ofx ou .pdf).
+        session: Sessão injetada pelo FastAPI.
+
+    Raises:
+        HTTPException: 400 para formato não suportado.
+
+    Returns:
+        Transações (NEW/MATCHED), palpite de conta e snapshots de saldo.
+    """
     content = await file.read()
     filename = file.filename.lower()
     
@@ -199,6 +297,18 @@ async def confirm_import(
     payload: ImportConfirmRequest,
     session: AsyncSession = Depends(get_db_session),
 ):
+    """Confirma a importação: grava itens NEW (idempotente) e saldos da conta.
+
+    Args:
+        payload: Transações revisadas, snapshots e conta do import.
+        session: Sessão injetada pelo FastAPI.
+
+    Raises:
+        HTTPException: 422 quando conta/tipo/data são inválidos.
+
+    Returns:
+        Mensagem com quantidades de itens e saldos atualizados.
+    """
     success_count = 0
     snapshots_count = 0
     try:
@@ -274,10 +384,23 @@ if FRONTEND_DIST.exists():
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_react_app(full_path: str) -> FileResponse:
+        """Serve o SPA para qualquer rota não-API (fallback do frontend).
+
+        Args:
+            full_path: Caminho requisitado (ignorado, sempre devolve o index).
+
+        Returns:
+            O `index.html` do build do frontend.
+        """
         return FileResponse(FRONTEND_DIST / "index.html")
 else:
     app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
     @app.get("/", include_in_schema=False)
     async def home() -> FileResponse:
+        """Serve a página inicial legada quando o build do frontend não existe.
+
+        Returns:
+            A página estática de `app/static/index.html`.
+        """
         return FileResponse(BASE_DIR / "static" / "index.html")

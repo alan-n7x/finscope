@@ -29,6 +29,17 @@ def compute_daily_limit(
     - remaining_today: recommended_per_day - gastos na data de referencia.
     - status: EXCEEDED se estourou (ou sem saldo livre), WARNING se
       consumiu >= 80% da cota ou nao ha margem, NORMAL caso contrario.
+
+    Args:
+        total_balance: Saldo total somando as contas.
+        pending_month: Despesas pendentes do mês alvo.
+        spent_ref_day: Gasto já realizado na data de referência.
+        ref_date: Data de referência do cálculo.
+        target_month: Mês alvo no formato YYYY-MM.
+
+    Returns:
+        Dicionário com cota diária, gasto do dia, restante, dias restantes,
+        saldo livre e status (NORMAL/WARNING/EXCEEDED).
     """
     year_str, month_str = target_month.split("-")
     year, month = int(year_str), int(month_str)

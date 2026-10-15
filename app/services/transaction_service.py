@@ -18,9 +18,14 @@ from app.schemas import TransactionCreate
 
 
 class TransactionService:
-    """Creates ledger entries without allowing another store to become authoritative."""
+    """Cria lançamentos no ledger; o PostgreSQL é a única fonte de verdade."""
 
     def __init__(self, session: AsyncSession) -> None:
+        """Vincula o serviço a uma sessão assíncrona existente.
+
+        Args:
+            session: Sessão SQLAlchemy da operação atual.
+        """
         self.session = session
 
     async def create(
@@ -29,6 +34,20 @@ class TransactionService:
         *,
         external_id: str | None = None,
     ) -> tuple[Transaction, bool]:
+        """Cria o lançamento resolvendo conta e categoria por nome (cria se faltar).
+
+        Args:
+            payload: Dados do lançamento (`TransactionCreate`).
+            external_id: Chave de idempotência (ex.: `import:<id estável>`).
+                Repetidos na mesma conta retornam o existente sem duplicar.
+
+        Raises:
+            ValueError: Data fora do formato YYYY-MM-DD, conta inexistente
+                ou tipo diferente de Receita/Despesa/Transferência.
+
+        Returns:
+            Tupla (transação, True se criada / False se já existia).
+        """
         try:
             transaction_date = datetime.date.fromisoformat(payload.date)
         except ValueError as exc:
@@ -94,6 +113,14 @@ class TransactionService:
 
     @staticmethod
     def serialize(transaction: Transaction) -> dict[str, Any]:
+        """Converte a entidade para o formato de exibição da API/UI.
+
+        Args:
+            transaction: Lançamento com `account`/`category` carregados.
+
+        Returns:
+            Dicionário com datas ISO, tipo em português e valores float.
+        """
         type_display = {
             TransactionType.INCOME: "Receita",
             TransactionType.EXPENSE: "Despesa",
