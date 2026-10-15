@@ -120,3 +120,4 @@ class ImportPreviewResponse(BaseModel):
 class ImportConfirmRequest(BaseModel):
     transactions: list[ImportTransaction]
     snapshots: list[BalanceSnapshot] = []
+    account: str | None = None

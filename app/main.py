@@ -203,6 +203,9 @@ async def confirm_import(
     snapshots_count = 0
     try:
         service = TransactionService(session)
+        fallback_account = import_engine.resolve_import_account(
+            payload.account, list(payload.transactions)
+        )
         for t in payload.transactions:
             if t.status == "NEW":
                 transaction, created = await service.create(
@@ -216,15 +219,15 @@ async def confirm_import(
                         essential=False,
                         paid=True,
                         obs="Importado via Extrato",
-                        account=t.account or "Itaú - Conta corrente",
+                        account=t.account or fallback_account,
                     ),
                     external_id=f"import:{t.id}",
                 )
                 if created:
                     success_count += 1
 
-        # Create or update balance snapshots from SALDO DO DIA lines
-        account_name = "Itaú - Conta corrente"
+        # Create or update balance snapshots na conta correta (Itaú ou Inter)
+        account_name = fallback_account
         if payload.snapshots:
             from decimal import Decimal
             from sqlalchemy import select
