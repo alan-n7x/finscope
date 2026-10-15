@@ -69,6 +69,44 @@ Este documento centraliza as issues e o roadmap para guiar o desenvolvimento do 
 
 ---
 
+## 📌 Issue #6: Importação Multi-Banco Idempotente (Itaú PDF + Inter OFX)
+* **Labels:** `feature`, `import`, `data-quality`
+* **Status:** ✅ Concluído (PR #27)
+* **Descrição:** Tornar o motor de importação multi-banco e seguro contra re-upload.
+* **Tarefas:**
+  - [x] Ids estáveis (FITID no OFX, hash no PDF) + `external_id` idempotente.
+  - [x] Propagar `account_guess` por transação; snapshots na conta correta.
+  - [x] Reconciliação exige mesma conta (evita falso match Itaú-out × Inter-in).
+  - [x] Classificar transferências próprias sem inverter sinais do dashboard.
+  - [x] Snapshot do `LEDGERBAL` no OFX; categoria `Estorno / Reembolso`.
+  - [x] `tests/test_import_engine.py` com 7 testes.
+
+---
+
+## 📌 Issue #7: App Completo no Docker (API + Frontend em Imagem Única)
+* **Labels:** `infrastructure`, `docker`, `frontend`
+* **Status:** ✅ Concluído (PR #28)
+* **Descrição:** Subir API + UI em um container na porta 8000 da LAN.
+* **Tarefas:**
+  - [x] `Dockerfile.backend` multi-stage (Node 22 builda o Vite; Python 3.14 roda tudo).
+  - [x] `.dockerignore` (fora `.venv`, `node_modules`, `.git`, `.env`, `dist` local).
+  - [x] Compose sem bind mount de dev, com `env_file` e healthcheck do backend.
+  - [x] Corrigir `AppShell.tsx` (`Wallet` sem import, `BrandLogo` não usado — `tsc` falhava).
+
+---
+
+## 📌 Issue #8: Padronização de Documentação (Docstrings Google + Docs)
+* **Labels:** `documentation`, `tech-debt`
+* **Status:** 🚧 Em andamento (branch `docs/padronizacao-e-documentacao`)
+* **Descrição:** Docstrings Google em todo o código de produção e docs refletindo o estado atual.
+* **Tarefas:**
+  - [x] Docstrings `Args/Returns/Raises` em `app/` e `scripts/`.
+  - [x] Reescrever `README.md` (stack, Docker, fluxo de importação, endpoints).
+  - [x] Atualizar `docs/` (issues #6–#8, follow-ups).
+  - [ ] Fora do escopo (convencional): `tests/` (padrão pytest), `scratch/` (descartável), `migrations/env.py` (boilerplate), `app/data/*.md` (referência legada).
+
+---
+
 ## 🚀 Como Rodar no Linux:
 
 1. Subir o banco PostgreSQL:

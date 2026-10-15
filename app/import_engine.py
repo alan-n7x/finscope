@@ -14,13 +14,30 @@ DEFAULT_ITAU_ACCOUNT = "Itaú - Conta corrente"
 
 
 def is_self_transfer(description: str) -> bool:
-    """Detecta movimentação entre contas próprias (Itaú <-> Inter)."""
+    """Detecta movimentação entre contas próprias (Itaú <-> Inter).
+
+    Args:
+        description: Descrição do lançamento como veio do extrato.
+
+    Returns:
+        True quando a descrição indica transferência entre contas do
+        próprio titular; False caso contrário.
+    """
     desc = (description or "").upper()
     return any(m in desc for m in SELF_TRANSFER_MARKERS)
 
 
 def suggest_category(description: str, is_self: bool) -> str:
-    """Sugere categoria para o preview sem quebrar o contrato do frontend."""
+    """Sugere categoria para o preview sem quebrar o contrato do frontend.
+
+    Args:
+        description: Descrição do lançamento como veio do extrato.
+        is_self: Resultado de `is_self_transfer` para a descrição.
+
+    Returns:
+        "Transferência interna" para movimentação própria, "Estorno /
+        Reembolso" para estornos e "Outros" nos demais casos.
+    """
     desc = (description or "").upper()
     if is_self:
         return "Transferência interna"
@@ -34,10 +51,18 @@ def classify_transfer_type(description: str, amount: float) -> str:
 
     Convenção existente no banco e hipótese do dashboard
     (TRANSFER soma + só se a descrição contém 'recebido'):
+
     - self out (valor negativo / PAYMENT) -> Despesa (visível no gasto do mês);
     - self in com 'recebido' na descrição -> Transferência (ex.: Inter/Santander);
     - self in sem 'recebido' (ex.: Itaú 'PIX TRANSF ALAN DO') -> Receita
       com categoria 'Transferência interna' para não inverter o sinal.
+
+    Args:
+        description: Descrição do lançamento como veio do extrato.
+        amount: Valor com sinal (positivo = entrada, negativo = saída).
+
+    Returns:
+        "Despesa", "Receita" ou "Transferência" no padrão do preview de importação.
     """
     if not is_self_transfer(description):
         return "Receita" if amount > 0 else "Despesa"
@@ -49,14 +74,32 @@ def classify_transfer_type(description: str, amount: float) -> str:
 
 
 def stable_id(prefix: str, *parts: str) -> str:
-    """Gera id determinístico para idempotência no re-upload."""
+    """Gera id determinístico para idempotência no re-upload.
+
+    Args:
+        prefix: Origem do lançamento ("itau", "ofx").
+        *parts: Fragmentos que identificam o lançamento (data, valor, tipo, descrição).
+
+    Returns:
+        Identificador estável no formato "{prefix}-{sha1[:16]}"; o mesmo
+        lançamento sempre gera o mesmo id entre uploads.
+    """
     raw = "|".join([prefix, *[str(p) for p in parts]])
     digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
     return f"{prefix}-{digest}"
 
 
 def resolve_import_account(payload_account: str | None, transactions: List[ImportTransaction]) -> str:
-    """Resolve a conta do import sem fixar Itaú (retrocompatível)."""
+    """Resolve a conta do import sem fixar Itaú (retrocompatível).
+
+    Args:
+        payload_account: Conta informada no topo do payload de confirmação, se houver.
+        transactions: Lançamentos do preview, que já carregam `account` do parser.
+
+    Returns:
+        A conta do payload, ou a da primeira transação preenchida, ou o
+        fallback "Itaú - Conta corrente" quando nada foi informado.
+    """
     if payload_account and payload_account.strip():
         return payload_account.strip()
     for t in transactions:
@@ -65,7 +108,17 @@ def resolve_import_account(payload_account: str | None, transactions: List[Impor
     return DEFAULT_ITAU_ACCOUNT
 
 def parse_ofx(file_bytes: bytes) -> Tuple[List[ImportTransaction], List[BalanceSnapshot], str]:
-    """Parses OFX file and returns a list of transactions, balance snapshots, and account guess."""
+    """Interpreta um extrato OFX genérico (Inter, Santander, Nubank...).
+
+    Usa o FITID como id estável do lançamento e o LEDGERBAL como snapshot
+    de saldo; classifica transferências próprias e estornos.
+
+    Args:
+        file_bytes: Conteúdo bruto do arquivo .ofx.
+
+    Returns:
+        Tupla (transações, snapshots de saldo, palpite de conta destino).
+    """
     ofx = OfxParser.parse(io.BytesIO(file_bytes))
     transactions = []
     
@@ -124,7 +177,17 @@ def parse_ofx(file_bytes: bytes) -> Tuple[List[ImportTransaction], List[BalanceS
     return transactions, snapshots, account_guess
 
 def parse_itau_pdf(file_bytes: bytes) -> Tuple[List[ImportTransaction], List[BalanceSnapshot], str]:
-    """Parses an Itaú PDF bank statement."""
+    """Interpreta o extrato em PDF do Itaú (conta corrente).
+
+    Extrai lançamentos por regex de linha, linhas SALDO DO DIA como
+    snapshots e o "saldo em conta" do cabeçalho como snapshot mais recente.
+
+    Args:
+        file_bytes: Conteúdo bruto do arquivo .pdf do Itaú.
+
+    Returns:
+        Tupla (transações, snapshots de saldo, "Itaú - Conta corrente").
+    """
     transactions = []
     snapshots = []
     header_snapshot = None
@@ -215,12 +278,20 @@ def parse_itau_pdf(file_bytes: bytes) -> Tuple[List[ImportTransaction], List[Bal
     return transactions, snapshots, "Itaú - Conta corrente"
 
 def reconcile_transactions(imported_txs: List[ImportTransaction], db_txs: List[dict]) -> List[ImportTransaction]:
-    """
-    Cross-checks imported transactions against existing DB transactions.
-    db_txs should be a list of dictionaries with keys: 'date', 'amount', 'type', 'description'.
-    Quando ambos os lados informam 'account', o match exige a mesma conta —
-    sem isso, as duas pernas de uma transferência interna (Itaú out x Inter in,
+    """Cruza lançamentos importados com os existentes no banco.
+
+    Marca MATCHED quando valor e tipo coincidem com tolerância de 2 dias;
+    quando ambos os lados informam `account`, exige a mesma conta — sem
+    isso, as duas pernas de uma transferência interna (Itaú out x Inter in,
     mesmo valor/data) geram falso MATCHED e uma perna deixa de ser importada.
+
+    Args:
+        imported_txs: Lançamentos vindos do parser (status atualizado in-place).
+        db_txs: Lançamentos do banco como dicts com 'date', 'amount', 'type',
+            'description' e, quando disponível, 'account'.
+
+    Returns:
+        A mesma lista de entrada, com `status` NEW ou MATCHED por item.
     """
     for imp in imported_txs:
         imp_date = datetime.datetime.strptime(imp.date, "%Y-%m-%d").date()

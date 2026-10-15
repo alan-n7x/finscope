@@ -45,7 +45,15 @@ LEGACY_FALLBACK_ONEDRIVE_PATH = pathlib.Path(
 
 
 def get_excel_path() -> pathlib.Path:
-    """Resolve o caminho da planilha legada usada como fonte da migração única."""
+    """Resolve o caminho da planilha legada usada como fonte da migração única.
+
+    Procura symlink/conteúdo de `LEGACY_EXCEL_PATH`, depois o fallback
+    `FINSCOPE_LEGACY_EXCEL_PATH`, sem nunca falhar aqui (a falta do arquivo
+    só é erro dentro de `run_etl`).
+
+    Returns:
+        Caminho resolvido (existente ou não) da planilha de origem.
+    """
     import os as _os
 
     p = LEGACY_EXCEL_PATH
@@ -87,7 +95,14 @@ DEFAULT_USER_EMAIL = os.getenv("FINSCOPE_USER_EMAIL", "admin@finscope.local")
 
 
 def to_decimal(val: any) -> Decimal:
-    """Converte com segurança qualquer valor float/int/str para Decimal(14, 2)."""
+    """Converte com segurança qualquer valor float/int/str para Decimal(14, 2).
+
+    Args:
+        val: Valor bruto da célula (aceita "R$", espaços e vírgula decimal).
+
+    Returns:
+        Decimal com 2 casas (ROUND_HALF_UP) ou 0.00 quando inválido/vazio.
+    """
     if val is None or str(val).strip() == "":
         return Decimal("0.00")
     if isinstance(val, (int, float, str)):
@@ -100,7 +115,14 @@ def to_decimal(val: any) -> Decimal:
 
 
 def parse_date(val: any) -> datetime.date:
-    """Converte datetime, date ou string para objeto datetime.date."""
+    """Converte datetime, date ou string para objeto datetime.date.
+
+    Args:
+        val: Valor bruto da célula (datetime, date ou string em formatos comuns).
+
+    Returns:
+        Data convertida, ou hoje quando o valor é irreconhecível.
+    """
     if isinstance(val, datetime.datetime):
         return val.date()
     if isinstance(val, datetime.date):
@@ -116,6 +138,14 @@ def parse_date(val: any) -> datetime.date:
 
 
 async def run_etl():
+    """Executa a carga única planilha -> PostgreSQL em transação atômica.
+
+    Recria as tabelas, migra usuário/contas/dívidas/lançamentos e imprime
+    auditoria centavo a centavo. Rollback total em qualquer falha.
+
+    Raises:
+        FileNotFoundError: Se a planilha de origem não existir.
+    """
     excel_file = get_excel_path()
     print(f"[INFO] Lendo arquivo de origem: {excel_file}")
     

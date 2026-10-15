@@ -11,8 +11,19 @@ from app.infra.repositories.finance_repository import FinanceRepository
 
 
 class ExcelExportService:
+    """Gera o relatório .xlsx sob demanda (Excel é saída, nunca fonte)."""
+
     @staticmethod
     async def generate_financial_report(session: AsyncSession, month: str | None = None) -> io.BytesIO:
+        """Monta o relatório com abas de resumo mensal e lançamentos.
+
+        Args:
+            session: Sessão assíncrona para leitura do ledger.
+            month: Mês no formato YYYY-MM; omitido usa o mês corrente.
+
+        Returns:
+            Buffer posicionado no início, pronto para streaming/download.
+        """
         repo = FinanceRepository(session)
         summary = await repo.get_dashboard_summary(month=month)
         transactions = await repo.list_transactions(month=month, limit=1000)

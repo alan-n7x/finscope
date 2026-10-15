@@ -15,8 +15,10 @@ dp: Dispatcher | None = None
 polling_task: asyncio.Task | None = None
 
 async def start_bot() -> None:
-    """
-    Initializes the Telegram Bot and starts polling in the background.
+    """Inicializa o bot do Telegram e inicia o polling em background.
+
+    Silenciosamente inativo quando `TELEGRAM_BOT_TOKEN` não está configurado.
+    Instâncias globais são gerenciadas pelo lifespan do FastAPI.
     """
     global bot, dp, polling_task
     settings = get_settings()
@@ -37,9 +39,7 @@ async def start_bot() -> None:
 
 
 async def stop_bot() -> None:
-    """
-    Stops the Telegram Bot gracefully.
-    """
+    """Encerra o polling e a sessão do bot de forma graciosa (sem erro se inativo)."""
     global bot, dp, polling_task
     if bot and dp:
         logger.info("Stopping Telegram Bot...")

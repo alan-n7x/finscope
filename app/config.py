@@ -4,6 +4,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    """Configurações lidas do ambiente/`.env` (nunca versionar segredos)."""
+
     pluggy_client_id: str = ""
     pluggy_client_secret: str = ""
     pluggy_api_url: str = "https://api.pluggy.ai"
@@ -16,4 +18,9 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
+    """Retorna as configurações em cache (uma leitura do `.env` por processo).
+
+    Returns:
+        Instância única de `Settings` para o processo atual.
+    """
     return Settings()

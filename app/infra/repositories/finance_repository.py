@@ -25,10 +25,29 @@ from app.services.cash_balance import compute_cash_balance
 
 
 class FinanceRepository:
+    """Consultas agregadas do ledger; única porta de leitura financeira da API."""
+
     def __init__(self, session: AsyncSession) -> None:
+        """Vincula o repositório a uma sessão assíncrona existente.
+
+        Args:
+            session: Sessão SQLAlchemy da requisição atual.
+        """
         self.session = session
 
     async def get_dashboard_summary(self, month: Optional[str] = None, date: Optional[str] = None) -> dict[str, Any]:
+        """Calcula o resumo do dashboard na data de referência.
+
+        Saldo por conta prefere o snapshot bancário mais recente + ledger
+        posterior; receitas/despesas consideram POSTED até a data de referência.
+
+        Args:
+            month: Mês alvo no formato YYYY-MM (usa o último dia ou hoje).
+            date: Data de referência no formato YYYY-MM-DD (precede `month`).
+
+        Returns:
+            Dicionário com saldos, agregados do mês, limite diário e contas.
+        """
         # Resolve a data de referencia: usa 'date' se fornecido, senao extrai do 'month', senao hoje
         today = datetime.date.today()
         if date:
@@ -212,6 +231,11 @@ class FinanceRepository:
         }
 
     async def get_filter_options(self) -> dict[str, Any]:
+        """Lista valores distintos para os filtros da UI (categorias, contas, meses...).
+
+        Returns:
+            Dicionário com categorias, formas de pagamento, contas, meses e tipos.
+        """
         cat_stmt = select(Category.name).order_by(Category.name)
         cat_res = await self.session.execute(cat_stmt)
         categories = cat_res.scalars().all()
@@ -247,6 +271,18 @@ class FinanceRepository:
         status: Optional[str] = None,
         limit: int = 200,
     ) -> List[dict[str, Any]]:
+        """Lista lançamentos com filtros opcionais, mais recentes primeiro.
+
+        Args:
+            month: Filtra pelo mês no formato YYYY-MM.
+            category: Substring da categoria (case-insensitive).
+            search: Substring da descrição ou observações.
+            status: "Sim" (POSTED) ou "Não"/"Nao" (PENDING).
+            limit: Máximo de itens (o endpoint limita a 500).
+
+        Returns:
+            Lançamentos serializados para exibição, com conta e categoria resolvidas.
+        """
         stmt = (
             select(Transaction)
             .options(selectinload(Transaction.account), selectinload(Transaction.category))
@@ -312,6 +348,11 @@ class FinanceRepository:
         return results
 
     async def list_debts(self) -> List[dict[str, Any]]:
+        """Lista dívidas ordenadas pelo maior saldo devedor.
+
+        Returns:
+            Dívidas serializadas com prioridade em português e vencimento.
+        """
         stmt = select(Debt).order_by(desc(Debt.current_balance))
         res = await self.session.execute(stmt)
         debts = res.scalars().all()
@@ -347,6 +388,14 @@ class FinanceRepository:
         POSTED ate o dia de transicao; projected parte desse ponto e
         incorpora PENDING pela data do lancamento. Transferencias nao
         entram na serie.
+
+        Args:
+            month: Mês alvo no formato YYYY-MM.
+            date: Data de referência no formato YYYY-MM-DD (define o mês alvo).
+
+        Returns:
+            Dicionário com dias, data de transição, saldo inicial, projeção
+            final e flag de projeção existente.
         """
         today = datetime.date.today()
         if date:
@@ -373,6 +422,14 @@ class FinanceRepository:
         last_day = (end_date - datetime.timedelta(days=1)).day
 
         async def _net_by_day(status: TransactionStatus) -> dict[int, float]:
+            """Soma o líquido (receitas − despesas) por dia do mês para um status.
+
+            Args:
+                status: POSTED (realizado) ou PENDING (projetado).
+
+            Returns:
+                Mapa dia do mês -> líquido em reais (transferências excluídas).
+            """
             stmt = (
                 select(
                     Transaction.date,

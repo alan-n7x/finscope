@@ -27,7 +27,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 class Base(DeclarativeBase):
     """Base declarativa com timestamps padrão de auditoria."""
-    pass
 
 
 # ============================================================================
@@ -35,18 +34,21 @@ class Base(DeclarativeBase):
 # ============================================================================
 
 class TransactionType(str, enum.Enum):
+    """Tipo do lançamento no ledger: receita, despesa ou transferência interna."""
     INCOME = "INCOME"       # Receita
     EXPENSE = "EXPENSE"     # Despesa
     TRANSFER = "TRANSFER"   # Movimentação interna entre contas
 
 
 class TransactionStatus(str, enum.Enum):
+    """Situação do lançamento: previsto, liquidado ou cancelado."""
     PENDING = "PENDING"     # Previsto / Não pago
     POSTED = "POSTED"       # Liquidado / Confirmado
     CANCELED = "CANCELED"   # Cancelado
 
 
 class AccountType(str, enum.Enum):
+    """Natureza da conta: corrente, cartão, investimento ou dinheiro físico."""
     CHECKING = "CHECKING"         # Conta Corrente
     CREDIT_CARD = "CREDIT_CARD"   # Cartão de Crédito
     INVESTMENT = "INVESTMENT"     # Investimentos / Tesouro
@@ -54,6 +56,7 @@ class AccountType(str, enum.Enum):
 
 
 class DebtPriority(str, enum.Enum):
+    """Prioridade de quitação da dívida, da baixa à crítica."""
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
@@ -61,6 +64,7 @@ class DebtPriority(str, enum.Enum):
 
 
 class DebtStatus(str, enum.Enum):
+    """Estágio do contrato de dívida: ativa, renegociada ou quitada."""
     ACTIVE = "ACTIVE"
     RENEGOTIATED = "RENEGOTIATED"
     PAID_OFF = "PAID_OFF"
@@ -71,6 +75,8 @@ class DebtStatus(str, enum.Enum):
 # ============================================================================
 
 class User(Base):
+    """Titular único do controle financeiro (MVP local, sem autenticação)."""
+
     __tablename__ = "users"
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -88,6 +94,8 @@ class User(Base):
 
 
 class Account(Base):
+    """Conta do titular; saldo via snapshots bancários + ledger posterior."""
+
     __tablename__ = "accounts"
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -119,6 +127,8 @@ class Account(Base):
 
 
 class Category(Base):
+    """Categoria de lançamento, opcionalmente essencial e hierárquica."""
+
     __tablename__ = "categories"
 
     id: Mapped[uuid.UUID] = mapped_column(

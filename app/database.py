@@ -1,3 +1,9 @@
+"""Helpers legados do SQLite (era Pluggy MVP).
+
+Mantidos apenas por compatibilidade histórica; o PostgreSQL é a fonte
+única de verdade atual (ver `app/infra/db/`).
+"""
+
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -5,6 +11,17 @@ import aiosqlite
 
 
 def sqlite_path(database_url: str) -> str:
+    """Extrai o caminho do arquivo de uma URL `sqlite+aiosqlite:///`.
+
+    Args:
+        database_url: URL de conexão no formato `sqlite+aiosqlite:///<arquivo>`.
+
+    Raises:
+        ValueError: Se o esquema não for sqlite+aiosqlite ou não houver arquivo.
+
+    Returns:
+        Caminho do arquivo SQLite.
+    """
     prefix = "sqlite+aiosqlite:///"
     if not database_url.startswith(prefix):
         raise ValueError("DATABASE_URL deve usar sqlite+aiosqlite:///")
@@ -15,6 +32,11 @@ def sqlite_path(database_url: str) -> str:
 
 
 async def initialize_database(database_url: str) -> None:
+    """Cria o arquivo SQLite e a tabela `connected_items` se necessário.
+
+    Args:
+        database_url: URL de conexão no formato `sqlite+aiosqlite:///<arquivo>`.
+    """
     path = sqlite_path(database_url)
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     async with aiosqlite.connect(path) as db:
@@ -32,6 +54,12 @@ async def initialize_database(database_url: str) -> None:
 
 
 async def save_item(database_url: str, item_id: str) -> None:
+    """Persiste (upsert) o último `itemId` Pluggy conectado (linha única id=1).
+
+    Args:
+        database_url: URL de conexão no formato `sqlite+aiosqlite:///<arquivo>`.
+        item_id: Identificador do item Pluggy a armazenar.
+    """
     now = datetime.now(UTC).isoformat()
     async with aiosqlite.connect(sqlite_path(database_url)) as db:
         await db.execute(
