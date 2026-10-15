@@ -1,12 +1,49 @@
+import hashlib
 import io
 import datetime
-import uuid
 import pdfplumber
 import re
 from typing import List, Tuple
 from ofxparse import OfxParser
 
 from .schemas import ImportTransaction, BalanceSnapshot
+
+SELF_TRANSFER_MARKERS = ("ALAN DO",)
+ESTORNO_MARKERS = ("ESTORNO",)
+DEFAULT_ITAU_ACCOUNT = "Itaú - Conta corrente"
+
+
+def is_self_transfer(description: str) -> bool:
+    """Detecta movimentação entre contas próprias (Itaú <-> Inter)."""
+    desc = (description or "").upper()
+    return any(m in desc for m in SELF_TRANSFER_MARKERS)
+
+
+def suggest_category(description: str, is_self: bool) -> str:
+    """Sugere categoria para o preview sem quebrar o contrato do frontend."""
+    desc = (description or "").upper()
+    if is_self:
+        return "Transferência interna"
+    if any(m in desc for m in ESTORNO_MARKERS):
+        return "Estorno / Reembolso"
+    return "Outros"
+
+
+def stable_id(prefix: str, *parts: str) -> str:
+    """Gera id determinístico para idempotência no re-upload."""
+    raw = "|".join([prefix, *[str(p) for p in parts]])
+    digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
+    return f"{prefix}-{digest}"
+
+
+def resolve_import_account(payload_account: str | None, transactions: List[ImportTransaction]) -> str:
+    """Resolve a conta do import sem fixar Itaú (retrocompatível)."""
+    if payload_account and payload_account.strip():
+        return payload_account.strip()
+    for t in transactions:
+        if t.account and t.account.strip():
+            return t.account.strip()
+    return DEFAULT_ITAU_ACCOUNT
 
 def parse_ofx(file_bytes: bytes) -> Tuple[List[ImportTransaction], List[BalanceSnapshot], str]:
     """Parses OFX file and returns a list of transactions, balance snapshots, and account guess."""
@@ -30,20 +67,45 @@ def parse_ofx(file_bytes: bytes) -> Tuple[List[ImportTransaction], List[BalanceS
         # Convert date
         t_date = stmt.date.strftime("%Y-%m-%d")
         amount = float(stmt.amount)
-        t_type = "Receita" if amount > 0 else "Despesa"
+        description = stmt.memo or stmt.payee or "Transação Genérica"
+        self_transfer = is_self_transfer(description)
+        if self_transfer:
+            t_type = "Transferência"
+        else:
+            t_type = "Receita" if amount > 0 else "Despesa"
         amount = abs(amount)
 
+        fitid = (getattr(stmt, "id", None) or "").strip()
+        if fitid:
+            tx_id = f"ofx-{fitid}"
+        else:
+            tx_id = stable_id("ofx", t_date, f"{amount:.2f}", t_type, description)
+
         t = ImportTransaction(
-            id=str(uuid.uuid4()),
+            id=tx_id,
             date=t_date,
             type=t_type,
-            description=stmt.memo or stmt.payee or "Transação Genérica",
+            description=description,
             amount=amount,
-            status="NEW"
+            status="NEW",
+            category=suggest_category(description, self_transfer),
+            account=account_guess,
         )
         transactions.append(t)
-        
-    return transactions, [], account_guess
+
+    snapshots: List[BalanceSnapshot] = []
+    try:
+        balance = ofx.account.statement.balance
+        balance_date = ofx.account.statement.balance_date
+        if balance is not None and balance_date is not None:
+            snapshots.append(BalanceSnapshot(
+                date=balance_date.strftime("%Y-%m-%d"),
+                balance=float(balance),
+            ))
+    except (AttributeError, ValueError, TypeError):
+        pass
+
+    return transactions, snapshots, account_guess
 
 def parse_itau_pdf(file_bytes: bytes) -> Tuple[List[ImportTransaction], List[BalanceSnapshot], str]:
     """Parses an Itaú PDF bank statement."""
@@ -105,21 +167,29 @@ def parse_itau_pdf(file_bytes: bytes) -> Tuple[List[ImportTransaction], List[Bal
                         amount = float(val_str)
                     except ValueError:
                         continue
-                        
-                    t_type = "Receita" if amount > 0 else "Despesa"
+
+                    self_transfer = is_self_transfer(desc)
+                    if self_transfer:
+                        t_type = "Transferência"
+                    else:
+                        t_type = "Receita" if amount > 0 else "Despesa"
                     amount = abs(amount)
                     
                     # Convert DD/MM/YYYY to YYYY-MM-DD
                     d, m, y = date_str.split('/')
                     iso_date = f"{y}-{m}-{d}"
+
+                    tx_id = stable_id("itau", iso_date, f"{amount:.2f}", t_type, desc)
                     
                     t = ImportTransaction(
-                        id=str(uuid.uuid4()),
+                        id=tx_id,
                         date=iso_date,
                         type=t_type,
                         description=desc,
                         amount=amount,
-                        status="NEW"
+                        status="NEW",
+                        category=suggest_category(desc, self_transfer),
+                        account="Itaú - Conta corrente",
                     )
                     transactions.append(t)
     
