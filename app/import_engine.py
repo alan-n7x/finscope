@@ -29,6 +29,25 @@ def suggest_category(description: str, is_self: bool) -> str:
     return "Outros"
 
 
+def classify_transfer_type(description: str, amount: float) -> str:
+    """Classifica o tipo preservando a convenção do ledger e o dashboard.
+
+    Convenção existente no banco e hipótese do dashboard
+    (TRANSFER soma + só se a descrição contém 'recebido'):
+    - self out (valor negativo / PAYMENT) -> Despesa (visível no gasto do mês);
+    - self in com 'recebido' na descrição -> Transferência (ex.: Inter/Santander);
+    - self in sem 'recebido' (ex.: Itaú 'PIX TRANSF ALAN DO') -> Receita
+      com categoria 'Transferência interna' para não inverter o sinal.
+    """
+    if not is_self_transfer(description):
+        return "Receita" if amount > 0 else "Despesa"
+    if amount < 0:
+        return "Despesa"
+    if "RECEBIDO" in (description or "").upper():
+        return "Transferência"
+    return "Receita"
+
+
 def stable_id(prefix: str, *parts: str) -> str:
     """Gera id determinístico para idempotência no re-upload."""
     raw = "|".join([prefix, *[str(p) for p in parts]])
@@ -69,10 +88,7 @@ def parse_ofx(file_bytes: bytes) -> Tuple[List[ImportTransaction], List[BalanceS
         amount = float(stmt.amount)
         description = stmt.memo or stmt.payee or "Transação Genérica"
         self_transfer = is_self_transfer(description)
-        if self_transfer:
-            t_type = "Transferência"
-        else:
-            t_type = "Receita" if amount > 0 else "Despesa"
+        t_type = classify_transfer_type(description, amount)
         amount = abs(amount)
 
         fitid = (getattr(stmt, "id", None) or "").strip()
@@ -169,10 +185,7 @@ def parse_itau_pdf(file_bytes: bytes) -> Tuple[List[ImportTransaction], List[Bal
                         continue
 
                     self_transfer = is_self_transfer(desc)
-                    if self_transfer:
-                        t_type = "Transferência"
-                    else:
-                        t_type = "Receita" if amount > 0 else "Despesa"
+                    t_type = classify_transfer_type(desc, amount)
                     amount = abs(amount)
                     
                     # Convert DD/MM/YYYY to YYYY-MM-DD
@@ -205,14 +218,21 @@ def reconcile_transactions(imported_txs: List[ImportTransaction], db_txs: List[d
     """
     Cross-checks imported transactions against existing DB transactions.
     db_txs should be a list of dictionaries with keys: 'date', 'amount', 'type', 'description'.
+    Quando ambos os lados informam 'account', o match exige a mesma conta —
+    sem isso, as duas pernas de uma transferência interna (Itaú out x Inter in,
+    mesmo valor/data) geram falso MATCHED e uma perna deixa de ser importada.
     """
     for imp in imported_txs:
         imp_date = datetime.datetime.strptime(imp.date, "%Y-%m-%d").date()
+        imp_account = (imp.account or "").strip().lower()
         
         match_found = False
         for db_t in db_txs:
             # Check if amounts match exactly
             if abs(db_t['amount'] - imp.amount) < 0.01 and db_t['type'] == imp.type:
+                db_account = str(db_t.get('account') or "").strip().lower()
+                if imp_account and db_account and imp_account != db_account:
+                    continue
                 # Check if dates are within 2 days
                 db_date = datetime.datetime.strptime(db_t['date'], "%Y-%m-%d").date()
                 diff = abs((db_date - imp_date).days)

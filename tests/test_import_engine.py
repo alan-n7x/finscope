@@ -99,6 +99,39 @@ def test_parse_ofx_ids_estaveis_conta_e_snapshot():
     assert abs(snaps[0].balance - 32.38) < 0.01
 
 
+def test_classify_transfer_type_preserva_dashboard():
+    # out sempre Despesa (visível no gasto do mês)
+    assert import_engine.classify_transfer_type("PIX TRANSF ALAN DO14/10", -53.0) == "Despesa"
+    assert import_engine.classify_transfer_type('Pix enviado: "Cp :60701190-Alan dos Santos Oliveira"', -64.0) == "Despesa"
+    # in com recebido -> Transferência (dashboard soma + pelo sniffing existente)
+    assert import_engine.classify_transfer_type('Pix recebido: "Cp :60701190-ALAN DOS SANTOS OLIVEIRA"', 53.0) == "Transferência"
+    # in sem recebido (Itaú) -> Receita para não inverter o sinal no dashboard
+    assert import_engine.classify_transfer_type("PIX TRANSF ALAN DO13/10", 64.0) == "Receita"
+    # não-self mantém regra natural
+    assert import_engine.classify_transfer_type("PIX QRS 99 FOOD", -29.4) == "Despesa"
+    assert import_engine.classify_transfer_type("REMUNERACAO/SALARIO", 2306.85) == "Receita"
+
+
+def test_reconcile_exige_mesma_conta_para_transfer_interna():
+    imp = [
+        ImportTransaction(id="a", date="2026-10-08", type="Despesa",
+                          description="PIX TRANSF ALAN DO08/10", amount=262.85,
+                          status="NEW", account="Itaú - Conta corrente"),
+    ]
+    db_outra_conta = [
+        {"date": "2026-10-08", "amount": 262.85, "type": "Despesa",
+         "description": "outra", "account": "Banco Inter - Conta corrente"},
+    ]
+    out = import_engine.reconcile_transactions([t.model_copy() for t in imp], db_outra_conta)
+    assert out[0].status == "NEW"
+    db_mesma_conta = [
+        {"date": "2026-10-08", "amount": 262.85, "type": "Despesa",
+         "description": "PIX TRANSF ALAN DO08/10", "account": "Itaú - Conta corrente"},
+    ]
+    out2 = import_engine.reconcile_transactions([t.model_copy() for t in imp], db_mesma_conta)
+    assert out2[0].status == "MATCHED"
+
+
 def test_resolve_import_account_multibanco():
     txs = [
         ImportTransaction(id="x", date="2026-10-14", type="Despesa",
@@ -120,10 +153,12 @@ def test_parse_itau_pdf_real_se_disponivel():
     # ids determinísticos
     txs2, _, _ = import_engine.parse_itau_pdf(pdf_path.read_bytes())
     assert [t.id for t in txs] == [t.id for t in txs2]
-    # self-transfer classificado
+    # self-transfer: outs Despesa, in Itaú sem recebido Receita, categoria interna
     self_txs = [t for t in txs if "ALAN DO" in t.description]
-    assert self_txs and all(t.type == "Transferência" for t in self_txs)
+    assert self_txs
     assert all(t.category == "Transferência interna" for t in self_txs)
+    by_desc = {t.description: t.type for t in self_txs}
+    assert by_desc["PIX TRANSF ALAN DO13/10"] == "Receita"
     assert all(t.account == "Itaú - Conta corrente" for t in txs)
     # header snapshot preservado
     assert any(s.date == "2026-10-14" and abs(s.balance - 0.29) < 0.01 for s in snaps)
