@@ -9,8 +9,8 @@ import {
   Database,
   Menu,
   ChevronLeft,
+  Wallet,
 } from 'lucide-react';
-import { BrandLogo } from '../branding/BrandLogo';
 import { NewTransactionModal } from '../../features/transactions/NewTransactionModal';
 import { useCreateTransaction } from '../../../application/hooks/useTransactions';
 import { useFilterOptions } from '../../../application/hooks/useTransactions';
