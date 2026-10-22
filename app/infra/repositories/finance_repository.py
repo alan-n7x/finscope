@@ -35,6 +35,63 @@ class FinanceRepository:
         """
         self.session = session
 
+    async def update_account_balance(
+        self,
+        account_name: str,
+        balance: Decimal,
+        snapshot_date: datetime.date,
+    ) -> dict[str, Any]:
+        """Registra o saldo bancário real da conta como snapshot (upsert).
+
+        O snapshot ancora o saldo do dashboard: a partir dele, o repositório
+        soma apenas os lançamentos posteriores. É o equivalente ao "Saldo
+        bancário atual" da planilha e serve para contas sem extrato
+        importável (ex.: Mercado Livre/Pay).
+
+        Args:
+            account_name: Nome da conta (ex.: "Mercado Pago").
+            balance: Saldo real informado pelo usuário.
+            snapshot_date: Data do saldo (YYYY-MM-DD).
+
+        Raises:
+            ValueError: Quando a conta não existe ou está inativa.
+
+        Returns:
+            Dicionário com conta, saldo registrado e data do snapshot.
+        """
+        acc_stmt = select(Account).where(
+            Account.name == account_name,
+            Account.is_active.is_(True),
+        )
+        acc_res = await self.session.execute(acc_stmt)
+        account = acc_res.scalar_one_or_none()
+        if account is None:
+            raise ValueError(f"Conta não encontrada ou inativa: {account_name}")
+
+        snap_stmt = select(AccountBalanceSnapshot).where(
+            AccountBalanceSnapshot.account_id == account.id,
+            AccountBalanceSnapshot.snapshot_date == snapshot_date,
+        )
+        snap_res = await self.session.execute(snap_stmt)
+        snapshot = snap_res.scalar_one_or_none()
+
+        if snapshot is None:
+            snapshot = AccountBalanceSnapshot(
+                account_id=account.id,
+                snapshot_date=snapshot_date,
+                balance=balance,
+            )
+            self.session.add(snapshot)
+        else:
+            snapshot.balance = balance
+
+        await self.session.commit()
+        return {
+            "account": account.name,
+            "balance": float(balance),
+            "date": snapshot_date.isoformat(),
+        }
+
     async def get_dashboard_summary(self, month: Optional[str] = None, date: Optional[str] = None) -> dict[str, Any]:
         """Calcula o resumo do dashboard na data de referência.
 

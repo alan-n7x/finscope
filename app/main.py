@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 import datetime
+from decimal import Decimal, InvalidOperation
 
 from fastapi import FastAPI, HTTPException, Query, File, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +16,8 @@ from app.infra.repositories.finance_repository import FinanceRepository
 from app.services.excel_export_service import ExcelExportService
 from app.services.transaction_service import TransactionService
 from app.schemas import (
+    BalanceUpdateRequest,
+    BalanceUpdateResponse,
     CashFlowResponse,
     DashboardSummaryResponse,
     DebtItem,
@@ -107,6 +110,56 @@ async def get_dashboard(
     repo = FinanceRepository(session)
     summary = await repo.get_dashboard_summary(month=month, date=date)
     return DashboardSummaryResponse(**summary)
+
+
+@app.post("/api/accounts/{account_name}/balance", response_model=BalanceUpdateResponse)
+async def update_account_balance(
+    account_name: str,
+    payload: BalanceUpdateRequest,
+    session: AsyncSession = Depends(get_db_session)
+) -> BalanceUpdateResponse:
+    """Registra o saldo bancário real de uma conta (fecha o saldo na data informada).
+
+    Equivalente ao "Saldo bancário atual" da planilha: grava um snapshot que
+    ancora o dashboard, útil para contas sem extrato importável (Mercado
+    Livre/Pay, cartões). Repetir na mesma data sobrescreve o valor.
+
+    Args:
+        account_name: Nome da conta (ex.: "Mercado Pago").
+        payload: Saldo e data de referência.
+        session: Sessão injetada pelo FastAPI.
+
+    Raises:
+        HTTPException: 404 quando a conta não existe; 422 quando saldo ou
+            data são inválidos.
+
+    Returns:
+        Conta, saldo registrado, data e novo saldo total do dashboard.
+    """
+    try:
+        snapshot_date = (
+            datetime.date.fromisoformat(payload.date)
+            if payload.date
+            else datetime.date.today()
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Data inválida (use YYYY-MM-DD)") from exc
+
+    try:
+        balance = Decimal(str(payload.balance)).quantize(Decimal("0.01"))
+    except (InvalidOperation, ValueError) as exc:
+        raise HTTPException(status_code=422, detail="Saldo inválido") from exc
+    if not balance.is_finite():
+        raise HTTPException(status_code=422, detail="Saldo inválido")
+
+    repo = FinanceRepository(session)
+    try:
+        result = await repo.update_account_balance(account_name, balance, snapshot_date)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    summary = await repo.get_dashboard_summary()
+    return BalanceUpdateResponse(**result, total_balance=summary["total_balance"])
 
 
 @app.get("/api/options", response_model=FilterOptionsResponse)

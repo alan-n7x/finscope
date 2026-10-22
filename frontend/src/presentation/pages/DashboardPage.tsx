@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDashboard } from '../../application/hooks/useDashboard';
 import { useCashFlow } from '../../application/hooks/useCashFlow';
+import { useUpdateAccountBalance } from '../../application/hooks/useUpdateAccountBalance';
 import { KpiCardsGrid } from '../features/dashboard/KpiCardsGrid';
 import { CashFlowChart } from '../features/dashboard/CashFlowChart';
 import { AccountsGrid } from '../features/dashboard/AccountsGrid';
@@ -11,6 +12,7 @@ export const DashboardPage: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState(currentPeriod());
   const { data: dashboardData, isLoading, isFetching } = useDashboard(selectedPeriod);
   const { data: cashFlow, isLoading: cashFlowLoading } = useCashFlow(selectedPeriod);
+  const updateBalance = useUpdateAccountBalance();
 
   const loading = isLoading || isFetching;
   const summary = dashboardData?.summary;
@@ -41,7 +43,13 @@ export const DashboardPage: React.FC = () => {
       {isEmpty ? (
         <div className="empty-state">Nenhum lançamento neste mês.</div>
       ) : (
-        <AccountsGrid accounts={summary?.accounts} loading={loading} />
+        <AccountsGrid
+          accounts={summary?.accounts}
+          loading={loading}
+          onUpdateBalance={async (account, balance, date) => {
+            await updateBalance.mutateAsync({ account, balance, date });
+          }}
+        />
       )}
     </div>
   );

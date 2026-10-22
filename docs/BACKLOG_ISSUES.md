@@ -95,9 +95,22 @@ Este documento centraliza as issues e o roadmap para guiar o desenvolvimento do 
 
 ---
 
+## 📌 Issue #9: Registro Manual de Saldo por Conta
+* **Labels:** `feature`, `dashboard`, `data-quality`
+* **Status:** ✅ Concluído
+* **Descrição:** Permitir registrar o saldo bancário real de uma conta, para contas sem extrato importável (Mercado Livre/Pay, cartões).
+* **Tarefas:**
+  - [x] `POST /api/accounts/{nome}/balance` grava snapshot (upsert por conta+data).
+  - [x] `FinanceRepository.update_account_balance` + 404 para conta inexistente/inativa.
+  - [x] UI: botão "Atualizar saldo" no card da conta (dashboard) com modal de valor/data.
+  - [x] `tests/test_account_balance.py` (7 testes, transação isolada com rollback).
+  - [x] ETL: não descarta mais o "Saldo bancário atual" sem data — passa a avisar.
+
+---
+
 ## 📌 Issue #8: Padronização de Documentação (Docstrings Google + Docs)
 * **Labels:** `documentation`, `tech-debt`
-* **Status:** 🚧 Em andamento (branch `docs/padronizacao-e-documentacao`)
+* **Status:** ✅ Concluído (PR #29)
 * **Descrição:** Docstrings Google em todo o código de produção e docs refletindo o estado atual.
 * **Tarefas:**
   - [x] Docstrings `Args/Returns/Raises` em `app/` e `scripts/`.

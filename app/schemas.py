@@ -55,6 +55,18 @@ class TransactionCreate(BaseModel):
     account: str = Field(default="Itaú - Conta corrente")
 
 
+class BalanceUpdateRequest(BaseModel):
+    balance: float = Field(description="Saldo bancário real da conta (R$)")
+    date: str | None = Field(default=None, description="Data do saldo (YYYY-MM-DD); padrão: hoje")
+
+
+class BalanceUpdateResponse(BaseModel):
+    account: str
+    balance: float
+    date: str
+    total_balance: float
+
+
 class DebtItem(BaseModel):
     creditor: str
     type: str

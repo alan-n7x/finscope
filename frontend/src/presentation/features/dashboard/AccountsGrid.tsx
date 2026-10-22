@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Account } from '../../../domain/entities/Account';
+import { UpdateBalanceModal } from './UpdateBalanceModal';
 
 interface AccountsGridProps {
   accounts?: Account[];
   loading?: boolean;
+  onUpdateBalance?: (account: string, balance: number, date: string) => Promise<void>;
 }
 
-export const AccountsGrid: React.FC<AccountsGridProps> = ({ accounts = [], loading = false }) => {
+export const AccountsGrid: React.FC<AccountsGridProps> = ({ accounts = [], loading = false, onUpdateBalance }) => {
+  const [editing, setEditing] = useState<Account | null>(null);
+
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -44,9 +48,29 @@ export const AccountsGrid: React.FC<AccountsGridProps> = ({ accounts = [], loadi
               {acc.name} ({acc.type})
             </span>
             <span className="account-balance">{formatCurrency(acc.balance)}</span>
+            {onUpdateBalance && (
+              <button
+                type="button"
+                className="account-balance-update"
+                onClick={() => setEditing(acc)}
+                title="Registrar o saldo real desta conta"
+              >
+                Atualizar saldo
+              </button>
+            )}
           </div>
         ))}
       </div>
+
+      <UpdateBalanceModal
+        isOpen={editing !== null}
+        accountName={editing?.name || ''}
+        currentBalance={editing?.balance || 0}
+        onClose={() => setEditing(null)}
+        onSubmit={async (balance, date) => {
+          if (editing) await onUpdateBalance?.(editing.name, balance, date);
+        }}
+      />
     </section>
   );
 };
