@@ -332,6 +332,31 @@ h1 {
   color: var(--text-main);
 }
 
+.account-balance-update {
+  margin-top: 6px;
+  align-self: flex-start;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.account-balance-update:hover {
+  border-color: rgba(59, 130, 246, 0.6);
+  color: var(--text-main);
+}
+
+.form-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+  line-height: 1.4;
+}
+
 /* ─── ANALYTICS ─────────────────────────────────────── */
 /* Mobile: stacked */
 .analytics-section {

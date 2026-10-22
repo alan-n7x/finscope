@@ -1,4 +1,4 @@
-import type { IDashboardRepository } from '../../domain/repositories/IDashboardRepository';
+import type { IDashboardRepository, BalanceUpdateResult } from '../../domain/repositories/IDashboardRepository';
 import { FinancialSummary } from '../../domain/value-objects/FinancialSummary';
 import { Account } from '../../domain/entities/Account';
 import { Debt } from '../../domain/entities/Debt';
@@ -39,5 +39,12 @@ export class ApiDashboardRepository implements IDashboardRepository {
   async getDebtsSummary(): Promise<Debt[]> {
     const data = await HttpClient.get<any[]>('/api/debts');
     return (data || []).map((d: any) => new Debt(d));
+  }
+
+  async updateAccountBalance(account: string, balance: number, date?: string): Promise<BalanceUpdateResult> {
+    return HttpClient.post<BalanceUpdateResult>(
+      `/api/accounts/${encodeURIComponent(account)}/balance`,
+      { balance, date }
+    );
   }
 }

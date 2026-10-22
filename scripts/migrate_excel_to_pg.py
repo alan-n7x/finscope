@@ -210,8 +210,14 @@ async def run_etl():
                     session.add(acc)
                     acc_key = acc_name.lower()
                     account_map[acc_key] = acc
-                    if snapshot_date and actual_bal > 0:
+                    if snapshot_date is not None:
+                        # Saldo real (col D) vira snapshot; 0 e valido (ancora o saldo).
                         account_snapshots[acc_key] = (actual_bal, snapshot_date)
+                    elif actual_bal != 0:
+                        print(
+                            f"[AVISO] Conta '{acc_name}' tem saldo {actual_bal} sem data de "
+                            "atualizacao (col I): saldo real NAO migrado."
+                        )
 
                 await session.flush()
 
