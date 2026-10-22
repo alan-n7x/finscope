@@ -14,7 +14,12 @@ Este documento serve como um repositório central para rastrear ideias, melhoria
 - **Limpeza de Histórico:** Implementar uma rotina para arquivar transações muito antigas (mais de 2 anos), focando o dashboard apenas nos *Snapshots* para garantir que consultas SQL sejam super rápidas.
 
 ## 📥 Importação
-- **Extrato do Mercado Livre/Pay:** não existe OFX/CSV exportável; hoje a conta só se mantém correta via registro manual de saldo (issue #9). Um parser de "resumo da conta" (PDF/print) automatizaria isso.
+- **Parser do extrato em PDF do Mercado Livre/Pay** (adiado): hoje a conta só se mantém correta via registro manual de saldo (issue #9). Formato do arquivo mapeado para quando for implementado:
+  - Cabeçalho: `EXTRATO DE CONTA`, `Periodo: De DD-MM-YYYY al DD-MM-YYYY`, `Entradas: R$ ...`, `Saidas: R$ -...`, `Saldo inicial: R$ ... Saldo final: R$ ...` (o *saldo final* é o melhor snapshot) e `Data de geração: DD-MM-YYYY`.
+  - Tabela: `Data Descrição ID da operação Valor Saldo`, com uma linha por movimentação no formato `DD-MM-YYYY <descrição> <id> R$ <valor> R$ <saldo>` — a coluna `Saldo` permite snapshots diários sem depender do cabeçalho.
+  - **Armadilha:** a descrição quebra em múltiplas linhas (ex.: `Pix recebido ALAN DOS` / `SANTOS OLIVEIRA`); o parser precisa unir a continuação com a linha seguinte.
+  - Movimentações típicas: `Rendimentos` (crédito mínimo), `Pix recebido <próprio>` / `Pix enviado <próprio>`, `Saque TECBAN` + `Custo de saque TECBAN` (saque da carteira para a conta corrente).
+  - Reconciliação: o "Pix recebido" de 14-10 (R\$ 100,00) e o de 19-10 (R\$ 12,73) já existem como pernas no Itaú/Inter — a conciliação por conta evita duplicar.
 - **Cartões de crédito:** os extratos de fatura (Santander, Visa) ainda não são importados; o saldo do cartão é o da fatura, não o saldo bancário.
 
 ## 🧾 Qualidade de Dados e Código (descobertas dos PRs #27 e #28)
