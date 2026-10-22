@@ -13,6 +13,10 @@ Este documento serve como um repositório central para rastrear ideias, melhoria
 ## 🗄 Banco de Dados
 - **Limpeza de Histórico:** Implementar uma rotina para arquivar transações muito antigas (mais de 2 anos), focando o dashboard apenas nos *Snapshots* para garantir que consultas SQL sejam super rápidas.
 
+## 📥 Importação
+- **Extrato do Mercado Livre/Pay:** não existe OFX/CSV exportável; hoje a conta só se mantém correta via registro manual de saldo (issue #9). Um parser de "resumo da conta" (PDF/print) automatizaria isso.
+- **Cartões de crédito:** os extratos de fatura (Santander, Visa) ainda não são importados; o saldo do cartão é o da fatura, não o saldo bancário.
+
 ## 🧾 Qualidade de Dados e Código (descobertas dos PRs #27 e #28)
 - **Direção explícita de transferência:** o dashboard infere o sinal de `TRANSFER` por sniffing de "recebido" na descrição (`finance_repository.py`). Migrar para campo de direção/montante explícito e converter os lançamentos existentes.
 - **Backfill de `external_id` legados:** linhas antigas (`extrato:...`, uuids aleatórios) não são reconhecidas pelos ids estáveis novos; mapear uma vez para idempotência total do histórico.

@@ -90,10 +90,29 @@ Detalhes de negócio e convenções do ledger em `app/data/*.md` (referência da
 | GET | `/api/transactions?...` | Extrato com filtros |
 | POST | `/api/transactions` | Lançamento manual |
 | GET | `/api/debts` | Dívidas |
+| POST | `/api/accounts/{nome}/balance` | Registra o saldo real da conta |
 | POST | `/api/transactions/import/upload` | Preview de extrato |
 | POST | `/api/transactions/import/confirm` | Confirma importação |
 | GET | `/api/reports/export-excel?month=` | Relatório `.xlsx` |
 | GET | `/api/options` | Opções dos filtros da UI |
+
+## Atualizar o saldo de uma conta
+
+Contas **sem extrato importável** (Mercado Livre/Pay, cartões, contas de
+parceiros) não recebem importação de OFX/PDF, então o app não tem como saber
+o saldo delas sozinho. Nesses casos, use **"Atualizar saldo"** no card da
+conta (dashboard) ou chame a API:
+
+```bash
+curl -X POST "http://localhost:8000/api/accounts/Mercado%20Pago/balance" \
+  -H "Content-Type: application/json" \
+  -d '{"balance": 250.75, "date": "2026-10-21"}'
+```
+
+O valor vira um *snapshot* na data informada e passa a ancorar o dashboard:
+lançamentos **posteriores** a essa data continuam somando normalmente, e
+repetir na mesma data sobrescreve o valor. É o equivalente ao "Saldo bancário
+atual" da planilha original.
 
 ## Convenções de código
 
