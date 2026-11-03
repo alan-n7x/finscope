@@ -17,13 +17,15 @@ const DEFAULT_COLOR_PALETTE = [
   '#ec4899', '#10b981', '#06b6d4', '#64748b'
 ];
 
+const INTERNAL_TRANSFER_CATEGORY = 'Transferência interna';
+
 export class GetAnalyticsSummaryUseCase {
   executeCategoryDistribution(transactions: Transaction[]): CategoryAnalytics {
     const categoryTotals: Record<string, number> = {};
     let totalExpenses = 0;
 
     for (const tx of transactions) {
-      if (tx.isExpense() && tx.isPaid()) {
+      if (tx.isExpense() && tx.isPaid() && tx.category !== INTERNAL_TRANSFER_CATEGORY) {
         const cat = tx.category || 'Outros';
         categoryTotals[cat] = (categoryTotals[cat] || 0) + tx.amount;
         totalExpenses += tx.amount;

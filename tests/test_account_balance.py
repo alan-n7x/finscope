@@ -142,3 +142,33 @@ async def test_negative_balance_is_accepted(client):
     )
     assert response.status_code == 200
     assert response.json()["balance"] == -15.5
+
+
+@pytest.mark.anyio
+async def test_spent_today_ignores_internal_transfers(client):
+    """Transferência interna não entra no gasto do dia nem nos totais do mês."""
+    future = "2099-01-01"
+    for tx_type, category, amount, description in [
+        ("Despesa", "Alimentação", 100.0, "Gasto real"),
+        ("Despesa", "Transferência interna", 500.0, "Pix para conta própria"),
+        ("Receita", "Salário", 300.0, "Receita real"),
+        ("Receita", "Transferência interna", 700.0, "Pix recebido de conta própria"),
+    ]:
+        response = await client.post(
+            "/api/transactions",
+            json={
+                "date": future,
+                "type": tx_type,
+                "category": category,
+                "description": description,
+                "amount": amount,
+                "account": TEMP_ACCOUNT,
+            },
+        )
+        assert response.status_code == 200
+
+    summary = (await client.get(f"/api/dashboard?date={future}")).json()
+    assert summary["spent_today"] == 100.0
+    assert summary["expense_month"] == 100.0
+    assert summary["income_month"] == 300.0
+    assert summary["net_month"] == 200.0
