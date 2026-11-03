@@ -55,6 +55,21 @@ class TransactionCreate(BaseModel):
     account: str = Field(default="Itaú - Conta corrente")
 
 
+class TransactionUpdate(BaseModel):
+    """Atualização parcial de um lançamento; campos omitidos ficam inalterados."""
+
+    date: str | None = Field(default=None, description="Data no formato YYYY-MM-DD")
+    type: str | None = Field(default=None, description="Despesa, Receita ou Transferência")
+    category: str | None = Field(default=None)
+    description: str | None = Field(default=None)
+    payment_method: str | None = Field(default=None)
+    amount: float | None = Field(default=None, gt=0, description="Valor da transação")
+    essential: bool | None = Field(default=None)
+    paid: bool | None = Field(default=None)
+    obs: str | None = Field(default=None)
+    account: str | None = Field(default=None)
+
+
 class BalanceUpdateRequest(BaseModel):
     balance: float = Field(description="Saldo bancário real da conta (R$)")
     date: str | None = Field(default=None, description="Data do saldo (YYYY-MM-DD); padrão: hoje")
