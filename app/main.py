@@ -14,7 +14,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.infra.db.session import engine, get_db_session
 from app.infra.repositories.finance_repository import FinanceRepository
 from app.services.excel_export_service import ExcelExportService
-from app.services.transaction_service import TransactionService
+from app.services.transaction_service import (
+    TransactionConflictError,
+    TransactionNotFoundError,
+    TransactionService,
+)
 from app.schemas import (
     BalanceUpdateRequest,
     BalanceUpdateResponse,
@@ -24,6 +28,7 @@ from app.schemas import (
     FilterOptionsResponse,
     TransactionCreate,
     TransactionItem,
+    TransactionUpdate,
     ImportPreviewResponse,
     ImportConfirmRequest
 )
@@ -212,6 +217,30 @@ async def list_transactions(
     return [TransactionItem(**t) for t in txs]
 
 
+@app.get("/api/transactions/{transaction_id}", response_model=TransactionItem)
+async def get_transaction(
+    transaction_id: str,
+    session: AsyncSession = Depends(get_db_session)
+) -> TransactionItem:
+    """Retorna um lançamento pelo id.
+
+    Args:
+        transaction_id: UUID do lançamento.
+        session: Sessão injetada pelo FastAPI.
+
+    Raises:
+        HTTPException: 404 quando o lançamento não existe.
+
+    Returns:
+        Lançamento serializado com conta e categoria resolvidas.
+    """
+    repo = FinanceRepository(session)
+    transaction = await repo.get_transaction(transaction_id)
+    if transaction is None:
+        raise HTTPException(status_code=404, detail="Lançamento não encontrado.")
+    return TransactionItem(**transaction)
+
+
 @app.post("/api/transactions", response_model=dict[str, Any])
 async def create_transaction(
     payload: TransactionCreate,
@@ -234,6 +263,46 @@ async def create_transaction(
         await session.commit()
         await session.refresh(transaction, attribute_names=["account", "category"])
         return TransactionService.serialize(transaction)
+    except ValueError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.patch("/api/transactions/{transaction_id}", response_model=dict[str, Any])
+async def update_transaction(
+    transaction_id: str,
+    payload: TransactionUpdate,
+    session: AsyncSession = Depends(get_db_session)
+) -> dict[str, Any]:
+    """Atualiza parcialmente um lançamento existente.
+
+    Campos omitidos permanecem inalterados. O `external_id` da importação é
+    imutável e lançamentos vinculados a transferências contábeis não podem ser
+    editados por este endpoint.
+
+    Args:
+        transaction_id: UUID do lançamento.
+        payload: Campos a alterar.
+        session: Sessão injetada pelo FastAPI.
+
+    Raises:
+        HTTPException: 404 quando não existe, 409 quando é transferência
+            vinculada e 422 quando algum campo é inválido.
+
+    Returns:
+        Lançamento atualizado, serializado.
+    """
+    try:
+        transaction, _ = await TransactionService(session).update(transaction_id, payload)
+        await session.commit()
+        await session.refresh(transaction, attribute_names=["account", "category"])
+        return TransactionService.serialize(transaction)
+    except TransactionNotFoundError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except TransactionConflictError as exc:
+        await session.rollback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         await session.rollback()
         raise HTTPException(status_code=422, detail=str(exc)) from exc

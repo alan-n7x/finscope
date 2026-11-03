@@ -415,32 +415,63 @@ class FinanceRepository:
         res = await self.session.execute(stmt)
         txs = res.scalars().all()
 
-        results = []
-        for t in txs:
-            type_display = "Despesa"
-            if t.type == TransactionType.INCOME:
-                type_display = "Receita"
-            elif t.type == TransactionType.TRANSFER:
-                type_display = "Transferência"
+        return [self._serialize_transaction(t) for t in txs]
 
-            paid_display = "Sim" if t.status == TransactionStatus.POSTED else "Não"
+    async def get_transaction(self, transaction_id: str) -> Optional[dict[str, Any]]:
+        """Busca um lançamento pelo id, com conta e categoria resolvidas.
 
-            results.append({
-                "id": str(t.id),
-                "date": t.date.strftime("%Y-%m-%d"),
-                "month": t.date.strftime("%Y-%m"),
-                "type": type_display,
-                "category": t.category.name if t.category else "Outros",
-                "description": t.description,
-                "payment_method": t.payment_method,
-                "amount": float(t.amount),
-                "essential": "Sim" if t.is_essential else "Não",
-                "paid": paid_display,
-                "obs": t.notes or "",
-                "account": t.account.name if t.account else "Itaú - Conta corrente",
-            })
+        Args:
+            transaction_id: UUID do lançamento em formato string.
 
-        return results
+        Returns:
+            Lançamento serializado ou None quando o id é inválido/inexistente.
+        """
+        try:
+            tx_uuid = uuid.UUID(transaction_id)
+        except (ValueError, AttributeError, TypeError):
+            return None
+
+        stmt = (
+            select(Transaction)
+            .options(selectinload(Transaction.account), selectinload(Transaction.category))
+            .where(Transaction.id == tx_uuid)
+        )
+        res = await self.session.execute(stmt)
+        transaction = res.scalar_one_or_none()
+        if transaction is None:
+            return None
+        return self._serialize_transaction(transaction)
+
+    @staticmethod
+    def _serialize_transaction(transaction: Transaction) -> dict[str, Any]:
+        """Converte a entidade para o formato de exibição da API.
+
+        Args:
+            transaction: Lançamento com conta/categoria carregadas.
+
+        Returns:
+            Dicionário com datas ISO, tipo em português e valores float.
+        """
+        type_display = "Despesa"
+        if transaction.type == TransactionType.INCOME:
+            type_display = "Receita"
+        elif transaction.type == TransactionType.TRANSFER:
+            type_display = "Transferência"
+
+        return {
+            "id": str(transaction.id),
+            "date": transaction.date.strftime("%Y-%m-%d"),
+            "month": transaction.date.strftime("%Y-%m"),
+            "type": type_display,
+            "category": transaction.category.name if transaction.category else "Outros",
+            "description": transaction.description,
+            "payment_method": transaction.payment_method,
+            "amount": float(transaction.amount),
+            "essential": "Sim" if transaction.is_essential else "Não",
+            "paid": "Sim" if transaction.status == TransactionStatus.POSTED else "Não",
+            "obs": transaction.notes or "",
+            "account": transaction.account.name if transaction.account else "Itaú - Conta corrente",
+        }
 
     async def list_debts(self) -> List[dict[str, Any]]:
         """Lista dívidas ordenadas pelo maior saldo devedor.

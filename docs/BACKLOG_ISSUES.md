@@ -120,6 +120,30 @@ Este documento centraliza as issues e o roadmap para guiar o desenvolvimento do 
 
 ---
 
+## 📌 Issue #10: Edição de Lançamentos pelo Extrato
+* **Labels:** `feature`, `api`, `frontend`
+* **Status:** 🚧 Em andamento
+* **Descrição:** Clicar em um lançamento do extrato para editar os mesmos campos do formulário de criação.
+* **Tarefas:**
+  - [x] `GET /api/transactions/{id}` (404 para id inválido/inexistente).
+  - [x] `PATCH /api/transactions/{id}` com atualização parcial, `external_id` imutável e `409` para transferências vinculadas.
+  - [x] Testes de consulta/edição e documentação do comportamento.
+  - [ ] UI: modal de edição reaproveitando o formulário.
+  - [ ] Invalidação de extrato, dashboard, cash-flow e analytics após salvar.
+
+---
+
+## 📌 Issue #11: Reconciliar Reimportação após Edição Manual
+* **Labels:** `data-quality`, `import`, `tech-debt`
+* **Status:** 📋 Backlog
+* **Descrição:** O `external_id` da importação é um hash de `data|valor|tipo|descrição`. Editar um desses campos faz um re-upload do mesmo extrato enxergar o item como novo e potencialmente duplicá-lo.
+* **Tarefas:**
+  - [ ] Definir identidade estável independente dos campos editáveis (ex.: coluna `import_key`).
+  - [ ] Ajustar `reconcile_transactions`/`confirm_import` para usar essa identidade.
+  - [ ] Teste de reimportação após edição de valor/data/descrição.
+
+---
+
 ## 🚀 Como Rodar no Linux:
 
 1. Subir o banco PostgreSQL:
