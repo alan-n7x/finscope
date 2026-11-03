@@ -74,6 +74,10 @@ Regras em `app/import_engine.py`:
 - **Transferências próprias** (`ALAN DO...`): saída → `Despesa`, entrada com
   "recebido" → `Transferência`, entrada Itaú sem "recebido" → `Receita`, sempre
   com categoria `Transferência interna` (preserva os sinais do dashboard).
+- **Analytics e limite diário**: receitas/despesas do mês, gasto do dia e
+  pendências usadas no cálculo ignoram lançamentos na categoria
+  `Transferência interna` (movimentação entre contas próprias não é consumo
+  nem obrigação).
 - **Snapshots**: `SALDO DO DIA` + "saldo em conta" do cabeçalho (Itaú) e
   `LEDGERBAL` (OFX); o dashboard ancora o saldo no snapshot mais recente.
 

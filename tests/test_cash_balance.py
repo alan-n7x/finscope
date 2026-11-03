@@ -118,18 +118,30 @@ def test_api_realized_matches_dashboard_and_projection():
         summary = client.get(f"/api/dashboard?month={month}").json()
         txs = client.get(f"/api/transactions?month={month}&limit=500").json()
     assert flow["transition_date"] == today.isoformat()
-    assert flow["has_projection"] is True
     by_day = {d["day"]: d for d in flow["days"]}
     # realizado no ponto de transicao == saldo oficial do dashboard
     assert abs(by_day[today.day]["realized_balance"] - summary["total_balance"]) < 0.01
     assert by_day[today.day]["projected_balance"] == by_day[today.day]["realized_balance"]
-    assert by_day[today.day + 1]["realized_balance"] is None
+    if today.day < len(by_day):
+        assert by_day[today.day + 1]["realized_balance"] is None
     assert by_day[today.day - 1]["projected_balance"] is None
-    # projecao final = transicao + TODAS as pendencias do mes (inclui atrasadas)
-    pending_net = sum(
-        t["amount"] if t["type"] == "Receita" else -t["amount"]
-        for t in txs if t.get("paid") == "Não" and t["type"] in ("Receita", "Despesa")
+
+    pending = [
+        t for t in txs
+        if t.get("paid") == "Não" and t["type"] in ("Receita", "Despesa")
+    ]
+    pending_by_day: dict[int, float] = {}
+    for t in pending:
+        day = int(t["date"][-2:])
+        net = t["amount"] if t["type"] == "Receita" else -t["amount"]
+        pending_by_day[day] = round(pending_by_day.get(day, 0.0) + net, 2)
+    # a flag so existe quando ha pendencia com impacto em dia posterior a transicao
+    assert flow["has_projection"] is any(
+        day > today.day and net != 0.0 for day, net in pending_by_day.items()
     )
+
+    # projecao final = transicao + TODAS as pendencias do mes (inclui atrasadas)
+    pending_net = round(sum(pending_by_day.values()), 2)
     expected_final = round(by_day[today.day]["realized_balance"] + pending_net, 2)
     assert flow["final_projected_balance"] == expected_final
     assert flow["final_projected_balance"] == by_day[len(by_day)]["projected_balance"]

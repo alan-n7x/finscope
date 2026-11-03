@@ -23,6 +23,24 @@ from app.infra.db.models import (
 from app.services.daily_limit import compute_daily_limit
 from app.services.cash_balance import compute_cash_balance
 
+# Categoria que marca movimentação entre contas do próprio titular. Ela não
+# representa consumo, receita nem obrigação nova, então fica fora dos agregados
+# de receita/despesa, do gasto do dia e das pendências do limite diário.
+INTERNAL_TRANSFER_CATEGORY = "Transferência interna"
+
+
+def _exclude_internal_transfers():
+    """Monta a condição SQL que ignora transferências entre contas próprias.
+
+    Returns:
+        Expressão SQLAlchemy verdadeira para lançamentos sem categoria ou com
+        categoria diferente de `INTERNAL_TRANSFER_CATEGORY`.
+    """
+    return or_(
+        Category.name.is_(None),
+        Category.name != INTERNAL_TRANSFER_CATEGORY,
+    )
+
 
 class FinanceRepository:
     """Consultas agregadas do ledger; única porta de leitura financeira da API."""
@@ -97,6 +115,10 @@ class FinanceRepository:
 
         Saldo por conta prefere o snapshot bancário mais recente + ledger
         posterior; receitas/despesas consideram POSTED até a data de referência.
+        Os agregados de receita/despesa do mês, o gasto do dia e as pendências
+        do limite diário ignoram lançamentos na categoria `Transferência
+        interna`, pois movimentação entre contas do próprio titular não é
+        consumo nem obrigação nova.
 
         Args:
             month: Mês alvo no formato YYYY-MM (usa o último dia ou hoje).
@@ -217,24 +239,32 @@ class FinanceRepository:
         # Receitas/despesas consideram apenas ate a data de referencia dentro do mes
         cutoff_date = min(ref_date, end_date - datetime.timedelta(days=1))
 
-        income_stmt = select(
-            func.coalesce(func.sum(Transaction.amount), Decimal("0.00"))
-        ).where(
-            Transaction.type == TransactionType.INCOME,
-            Transaction.status == TransactionStatus.POSTED,
-            Transaction.date >= start_date,
-            Transaction.date <= cutoff_date,
+        income_stmt = (
+            select(func.coalesce(func.sum(Transaction.amount), Decimal("0.00")))
+            .select_from(Transaction)
+            .outerjoin(Category, Transaction.category_id == Category.id)
+            .where(
+                Transaction.type == TransactionType.INCOME,
+                Transaction.status == TransactionStatus.POSTED,
+                Transaction.date >= start_date,
+                Transaction.date <= cutoff_date,
+                _exclude_internal_transfers(),
+            )
         )
         income_res = await self.session.execute(income_stmt)
         income_month = income_res.scalar_one()
 
-        expense_stmt = select(
-            func.coalesce(func.sum(Transaction.amount), Decimal("0.00"))
-        ).where(
-            Transaction.type == TransactionType.EXPENSE,
-            Transaction.status == TransactionStatus.POSTED,
-            Transaction.date >= start_date,
-            Transaction.date <= cutoff_date,
+        expense_stmt = (
+            select(func.coalesce(func.sum(Transaction.amount), Decimal("0.00")))
+            .select_from(Transaction)
+            .outerjoin(Category, Transaction.category_id == Category.id)
+            .where(
+                Transaction.type == TransactionType.EXPENSE,
+                Transaction.status == TransactionStatus.POSTED,
+                Transaction.date >= start_date,
+                Transaction.date <= cutoff_date,
+                _exclude_internal_transfers(),
+            )
         )
         expense_res = await self.session.execute(expense_stmt)
         expense_month = expense_res.scalar_one()
@@ -244,23 +274,31 @@ class FinanceRepository:
         free_after_reserve = projected_final - reserve_min
 
         # 3. Limite diario recomendado (compromissos pendentes do mes alvo)
-        pending_stmt = select(
-            func.coalesce(func.sum(Transaction.amount), Decimal("0.00"))
-        ).where(
-            Transaction.type == TransactionType.EXPENSE,
-            Transaction.status == TransactionStatus.PENDING,
-            Transaction.date >= start_date,
-            Transaction.date < end_date,
+        pending_stmt = (
+            select(func.coalesce(func.sum(Transaction.amount), Decimal("0.00")))
+            .select_from(Transaction)
+            .outerjoin(Category, Transaction.category_id == Category.id)
+            .where(
+                Transaction.type == TransactionType.EXPENSE,
+                Transaction.status == TransactionStatus.PENDING,
+                Transaction.date >= start_date,
+                Transaction.date < end_date,
+                _exclude_internal_transfers(),
+            )
         )
         pending_res = await self.session.execute(pending_stmt)
         pending_month = pending_res.scalar_one()
 
-        spent_day_stmt = select(
-            func.coalesce(func.sum(Transaction.amount), Decimal("0.00"))
-        ).where(
-            Transaction.type == TransactionType.EXPENSE,
-            Transaction.status == TransactionStatus.POSTED,
-            Transaction.date == ref_date,
+        spent_day_stmt = (
+            select(func.coalesce(func.sum(Transaction.amount), Decimal("0.00")))
+            .select_from(Transaction)
+            .outerjoin(Category, Transaction.category_id == Category.id)
+            .where(
+                Transaction.type == TransactionType.EXPENSE,
+                Transaction.status == TransactionStatus.POSTED,
+                Transaction.date == ref_date,
+                _exclude_internal_transfers(),
+            )
         )
         spent_day_res = await self.session.execute(spent_day_stmt)
         spent_ref_day = spent_day_res.scalar_one()
@@ -443,8 +481,9 @@ class FinanceRepository:
         Mantem os campos historicos (entradas/saidas confirmadas por dia e
         acumulados) e adiciona a serie de saldos: realized usa apenas
         POSTED ate o dia de transicao; projected parte desse ponto e
-        incorpora PENDING pela data do lancamento. Transferencias nao
-        entram na serie.
+        incorpora PENDING pela data do lancamento. Transferencias (tipo
+        TRANSFER e categoria `Transferência interna`) nao entram nos
+        agregados de receita/despesa.
 
         Args:
             month: Mês alvo no formato YYYY-MM.
@@ -514,11 +553,14 @@ class FinanceRepository:
                 Transaction.type,
                 func.coalesce(func.sum(Transaction.amount), Decimal("0.00")),
             )
+            .select_from(Transaction)
+            .outerjoin(Category, Transaction.category_id == Category.id)
             .where(
                 Transaction.status == TransactionStatus.POSTED,
                 Transaction.type.in_([TransactionType.INCOME, TransactionType.EXPENSE]),
                 Transaction.date >= start_date,
                 Transaction.date < end_date,
+                _exclude_internal_transfers(),
             )
             .group_by(Transaction.date, Transaction.type)
         )
