@@ -81,6 +81,18 @@ Regras em `app/import_engine.py`:
 - **Snapshots**: `SALDO DO DIA` + "saldo em conta" do cabeçalho (Itaú) e
   `LEDGERBAL` (OFX); o dashboard ancora o saldo no snapshot mais recente.
 
+### Edição manual de lançamentos
+
+`PATCH /api/transactions/{id}` altera apenas os campos enviados (`amount`,
+`date`, `account`, `category`, etc.). O `external_id` da importação é imutável
+e lançamentos ligados a uma transferência contábil (`transfer_id`) retornam
+`409`.
+
+Atenção ao editar um lançamento importado: o id estável é um hash de
+`data|valor|tipo|descrição`. Se algum desses campos for alterado, um re-upload
+do mesmo extrato pode enxergar o item como novo. Categoria, status, essencial e
+observação não afetam o hash e são seguros de editar.
+
 Detalhes de negócio e convenções do ledger em `app/data/*.md` (referência da
 época da planilha) e `docs/`.
 
@@ -92,7 +104,9 @@ Detalhes de negócio e convenções do ledger em `app/data/*.md` (referência da
 | GET | `/api/dashboard?month=&date=` | Saldos, mês e limite diário |
 | GET | `/api/dashboard/cash-flow?month=&date=` | Série diária realizado/projetado |
 | GET | `/api/transactions?...` | Extrato com filtros |
+| GET | `/api/transactions/{id}` | Consulta um lançamento |
 | POST | `/api/transactions` | Lançamento manual |
+| PATCH | `/api/transactions/{id}` | Edição parcial de lançamento |
 | GET | `/api/debts` | Dívidas |
 | POST | `/api/accounts/{nome}/balance` | Registra o saldo real da conta |
 | POST | `/api/transactions/import/upload` | Preview de extrato |
