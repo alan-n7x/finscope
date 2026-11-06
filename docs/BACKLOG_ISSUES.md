@@ -130,6 +130,7 @@ Este documento centraliza as issues e o roadmap para guiar o desenvolvimento do 
   - [x] Testes de consulta/edição e documentação do comportamento.
   - [x] UI: modal de edição reaproveitando o formulário.
   - [x] Invalidação de extrato, dashboard, cash-flow e analytics após salvar.
+  - [x] `key={current.id}` no formulário para reinicializar ao trocar de lançamento (#34).
 
 ---
 

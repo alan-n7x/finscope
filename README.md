@@ -5,6 +5,24 @@ importação de extratos com conciliação, dívidas, fluxo de caixa realizado v
 projetado, exportação Excel e lançamento rápido via Telegram. Fonte única de
 verdade: **PostgreSQL**.
 
+## Funcionalidades
+
+- **Dashboard**: saldo por conta ancorado no snapshot mais recente, receitas e
+  despesas do mês, limite diário e saldo consolidado.
+- **Extrato**: lançamentos com filtros de mês, categoria e status, além de busca
+  textual.
+- **Edição pelo extrato**: clique na linha (ou no ícone de lápis) para abrir o
+  mesmo formulário de criação já preenchido; o salvamento usa `PATCH` e atualiza
+  extrato, dashboard, fluxo de caixa e analytics sem recarregar a página.
+- **Importação de extratos**: OFX (Inter, Santander, Nubank...) e PDF do Itaú,
+  com preview, conciliação por conta e snapshots de saldo.
+- **Dívidas**: parcelas e vencimentos em aberto.
+- **Fluxo de caixa**: série diária de realizado vs. projetado.
+- **Analytics**: distribuição de gastos por categoria e comparativo mensal.
+- **Relatórios**: exportação `.xlsx` do mês.
+- **Extras**: atualização manual de saldo de contas sem extrato importável e
+  lançamento rápido via Telegram.
+
 ## Stack
 
 - **Backend:** FastAPI + SQLAlchemy 2.0 assíncrono (`asyncpg`), Pydantic v2
@@ -81,24 +99,55 @@ Regras em `app/import_engine.py`:
 - **Snapshots**: `SALDO DO DIA` + "saldo em conta" do cabeçalho (Itaú) e
   `LEDGERBAL` (OFX); o dashboard ancora o saldo no snapshot mais recente.
 
-### Edição manual de lançamentos
+### Edição de lançamentos
 
-`PATCH /api/transactions/{id}` altera apenas os campos enviados (`amount`,
-`date`, `account`, `category`, etc.). O `external_id` da importação é imutável
-e lançamentos ligados a uma transferência contábil (`transfer_id`) retornam
-`409`.
+**Pela interface**: no extrato, clique na linha ou no ícone de lápis. O modal
+"Editar Lançamento" carrega o detalhe atual (`GET /api/transactions/{id}`) e
+mostra o mesmo formulário de criação já preenchido. Ao salvar, o `PATCH`
+atualiza extrato, dashboard, fluxo de caixa e analytics sem recarregar a página.
+O ícone de lápis é um `button` com `aria-label` (acessível por teclado) e a linha
+funciona como atalho de mouse.
+
+**Pela API**: `PATCH /api/transactions/{id}` altera apenas os campos enviados
+(`amount`, `date`, `account`, `category`, etc.). O `external_id` da importação é
+imutável e lançamentos ligados a uma transferência contábil (`transfer_id`)
+retornam `409`.
 
 Atenção ao editar um lançamento importado: o id estável é um hash de
 `data|valor|tipo|descrição`. Se algum desses campos for alterado, um re-upload
 do mesmo extrato pode enxergar o item como novo. Categoria, status, essencial e
 observação não afetam o hash e são seguros de editar.
 
-No extrato, clique na linha (ou no ícone de lápis) para abrir o mesmo formulário
-de criação já preenchido. O salvamento usa `PATCH` e atualiza extrato, dashboard,
-cash-flow e analytics sem recarregar a página.
-
 Detalhes de negócio e convenções do ledger em `app/data/*.md` (referência da
 época da planilha) e `docs/`.
+
+## Estado e cache no frontend
+
+O estado de servidor fica no **React Query**; os componentes guardam apenas
+estado de UI (filtros, modal aberto e rascunho do formulário).
+
+- **Formulário único**: `TransactionForm` é compartilhado por
+  `NewTransactionModal` e `EditTransactionModal`, então criação e edição têm os
+  mesmos campos, validações e layout. O modal de edição usa `key={current.id}`
+  para reinicializar o formulário se o lançamento em edição mudar.
+- **Abertura instantânea + revalidação em background**: `useTransaction(id,
+  initialData)` usa a linha que já está no extrato como `initialData` e marca
+  `initialDataUpdatedAt: 0`. O modal abre imediatamente com os dados da tabela e
+  o `GET /api/transactions/{id}` roda em background para confirmar o estado real.
+
+Após salvar, `useUpdateTransaction` invalida as queries abaixo, e cada tela se
+atualiza sozinha:
+
+| Query key | Tela impactada |
+| --------- | -------------- |
+| `transactions` | Extrato e gráficos do Analytics |
+| `transaction` | Detalhe do lançamento no modal |
+| `dashboard` | Dashboard, Dívidas e resumo do Analytics |
+| `cash-flow` | Fluxo de caixa |
+| `filter-options` | Opções de filtros (categorias, contas, formas) |
+
+Analytics não tem endpoint próprio: é derivado no cliente de `transactions` +
+`dashboard`, portanto é atualizado pelas mesmas invalidações.
 
 ## Endpoints principais
 
@@ -117,6 +166,10 @@ Detalhes de negócio e convenções do ledger em `app/data/*.md` (referência da
 | POST | `/api/transactions/import/confirm` | Confirma importação |
 | GET | `/api/reports/export-excel?month=` | Relatório `.xlsx` |
 | GET | `/api/options` | Opções dos filtros da UI |
+
+No frontend, `GET /api/transactions/{id}` e `PATCH /api/transactions/{id}`
+formam o par usado pelo modal de edição do extrato: o `GET` preenche o
+formulário e o `PATCH` envia apenas os campos alterados.
 
 ## Atualizar o saldo de uma conta
 
