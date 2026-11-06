@@ -2,6 +2,7 @@ import type {
   ITransactionRepository,
   TransactionFilterParams,
   CreateTransactionDTO,
+  UpdateTransactionDTO,
   FilterOptions,
 } from '../../domain/repositories/ITransactionRepository';
 import { Transaction } from '../../domain/entities/Transaction';
@@ -22,8 +23,21 @@ export class ApiTransactionRepository implements ITransactionRepository {
     return (data || []).map((t: any) => new Transaction(t));
   }
 
+  async getTransaction(id: string): Promise<Transaction> {
+    const data = await HttpClient.get<any>(`/api/transactions/${encodeURIComponent(id)}`);
+    return new Transaction(data);
+  }
+
   async createTransaction(dto: CreateTransactionDTO): Promise<Transaction> {
     const data = await HttpClient.post<any>('/api/transactions', dto);
+    return new Transaction(data);
+  }
+
+  async updateTransaction(id: string, dto: UpdateTransactionDTO): Promise<Transaction> {
+    const data = await HttpClient.patch<any>(
+      `/api/transactions/${encodeURIComponent(id)}`,
+      dto
+    );
     return new Transaction(data);
   }
 
