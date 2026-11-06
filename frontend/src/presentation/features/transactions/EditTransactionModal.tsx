@@ -43,6 +43,9 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({
         </div>
       ) : (
         <TransactionForm
+          // O estado do formulário só é inicializado no mount; a key força
+          // reinicializar se o lançamento em edição mudar com o modal aberto.
+          key={current.id}
           filterOptions={filterOptions}
           initialValues={{
             date: current.date,
