@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { useTransactions, useFilterOptions } from '../../application/hooks/useTransactions';
 import { TransactionTable } from '../features/transactions/TransactionTable';
 import { ImportExtratoModal } from '../features/transactions/ImportExtratoModal';
+import { EditTransactionModal } from '../features/transactions/EditTransactionModal';
 import { DownloadCloud } from 'lucide-react';
+import type { Transaction } from '../../domain/entities/Transaction';
 
 export const ExtratoPage: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState('2026-08');
@@ -10,6 +12,7 @@ export const ExtratoPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const { data: filterOptions } = useFilterOptions();
   const { data: transactions = [], isLoading } = useTransactions({
@@ -48,11 +51,19 @@ export const ExtratoPage: React.FC = () => {
         onStatusChange={setSelectedStatus}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        onEdit={setEditingTransaction}
       />
       
       <ImportExtratoModal 
         isOpen={isImportModalOpen} 
         onClose={() => setIsImportModalOpen(false)} 
+      />
+
+      <EditTransactionModal
+        isOpen={Boolean(editingTransaction)}
+        transaction={editingTransaction}
+        onClose={() => setEditingTransaction(null)}
+        filterOptions={filterOptions}
       />
     </div>
   );

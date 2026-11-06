@@ -582,6 +582,47 @@ h2 {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.transaction-row {
+  cursor: pointer;
+}
+
+.transaction-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.row-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.row-action:hover,
+.row-action:focus-visible {
+  color: var(--primary);
+  border-color: var(--border-color);
+  background: rgba(16, 185, 129, 0.08);
+  outline: none;
+}
+
+.modal-state {
+  padding: var(--space-lg);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.modal-state--error {
+  color: #f87171;
+}
+
 /* ─── BADGES ─────────────────────────────────────────── */
 .badge {
   display: inline-flex;

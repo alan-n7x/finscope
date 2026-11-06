@@ -93,6 +93,10 @@ Atenção ao editar um lançamento importado: o id estável é um hash de
 do mesmo extrato pode enxergar o item como novo. Categoria, status, essencial e
 observação não afetam o hash e são seguros de editar.
 
+No extrato, clique na linha (ou no ícone de lápis) para abrir o mesmo formulário
+de criação já preenchido. O salvamento usa `PATCH` e atualiza extrato, dashboard,
+cash-flow e analytics sem recarregar a página.
+
 Detalhes de negócio e convenções do ledger em `app/data/*.md` (referência da
 época da planilha) e `docs/`.
 

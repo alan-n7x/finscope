@@ -122,14 +122,14 @@ Este documento centraliza as issues e o roadmap para guiar o desenvolvimento do 
 
 ## 📌 Issue #10: Edição de Lançamentos pelo Extrato
 * **Labels:** `feature`, `api`, `frontend`
-* **Status:** 🚧 Em andamento
+* **Status:** ✅ Concluído
 * **Descrição:** Clicar em um lançamento do extrato para editar os mesmos campos do formulário de criação.
 * **Tarefas:**
   - [x] `GET /api/transactions/{id}` (404 para id inválido/inexistente).
   - [x] `PATCH /api/transactions/{id}` com atualização parcial, `external_id` imutável e `409` para transferências vinculadas.
   - [x] Testes de consulta/edição e documentação do comportamento.
-  - [ ] UI: modal de edição reaproveitando o formulário.
-  - [ ] Invalidação de extrato, dashboard, cash-flow e analytics após salvar.
+  - [x] UI: modal de edição reaproveitando o formulário.
+  - [x] Invalidação de extrato, dashboard, cash-flow e analytics após salvar.
 
 ---
 
