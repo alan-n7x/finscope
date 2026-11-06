@@ -1,7 +1,7 @@
 import React from 'react';
 import { Transaction } from '../../../domain/entities/Transaction';
 import { Badge } from '../../components/ui/Badge';
-import { Search } from 'lucide-react';
+import { Search, Pencil } from 'lucide-react';
 import type { FilterOptions } from '../../../domain/repositories/ITransactionRepository';
 
 interface TransactionTableProps {
@@ -16,6 +16,7 @@ interface TransactionTableProps {
   onStatusChange: (status: string) => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  onEdit?: (transaction: Transaction) => void;
 }
 
 export const TransactionTable: React.FC<TransactionTableProps> = ({
@@ -30,6 +31,7 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
   onStatusChange,
   searchQuery,
   onSearchChange,
+  onEdit,
 }) => {
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -108,18 +110,19 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
               <th>Forma</th>
               <th>Valor</th>
               <th>Status</th>
+              <th>Ações</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={8} className="loading-cell">
+                <td colSpan={9} className="loading-cell">
                   Carregando lançamentos...
                 </td>
               </tr>
             ) : transactions.length === 0 ? (
               <tr>
-                <td colSpan={8} className="loading-cell">
+                <td colSpan={9} className="loading-cell">
                   Nenhum lançamento encontrado.
                 </td>
               </tr>
@@ -140,7 +143,11 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                 }
 
                 return (
-                  <tr key={tx.id}>
+                  <tr
+                    key={tx.id}
+                    className={onEdit ? 'transaction-row' : undefined}
+                    onClick={onEdit ? () => onEdit(tx) : undefined}
+                  >
                     <td>{formatDate(tx.date)}</td>
                     <td>
                       <Badge variant={variant}>{tx.type}</Badge>
@@ -159,6 +166,22 @@ export const TransactionTable: React.FC<TransactionTableProps> = ({
                       <Badge variant={tx.isPaid() ? 'paid' : 'pending'}>
                         {tx.isPaid() ? 'Pago' : 'Pendente'}
                       </Badge>
+                    </td>
+                    <td>
+                      {onEdit && (
+                        <button
+                          type="button"
+                          className="row-action"
+                          title="Editar lançamento"
+                          aria-label={`Editar ${tx.description}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(tx);
+                          }}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
