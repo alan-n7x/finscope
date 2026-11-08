@@ -3,13 +3,28 @@
 Guia de manutenção dos parsers de arquivo usados pela importação
 (`POST /api/transactions/import/upload`).
 
-## Visão geral
+## Estrutura
 
 ```
-upload (.ofx/.pdf)
-  → app.parsers.parse_pdf            # detecta o banco pelo conteúdo
-  → app.parsers.<banco>.parse_pages  # extrai linhas e valida totais
-  → import_engine.reconcile_transactions
+app/
+  import_rules.py        # regras de negócio (não lê arquivo)
+  parsers/
+    __init__.py          # parse_statement / parse_pdf: detecção e despacho
+    base.py              # TextLine, read_pages, parse_brl, erros
+    ofx.py               # OFX genérico
+    itau.py              # PDF do Itaú (conta corrente)
+    mercadopago.py       # PDF do Mercado Pago
+  import_engine.py       # shim de compatibilidade (imports antigos)
+```
+
+Fluxo do upload:
+
+```
+arquivo (.ofx/.pdf)
+  → app.parsers.parse_statement              # escolhe pelo tipo/extensão
+  → app.parsers.parse_pdf                    # PDF: detecta o banco pelo conteúdo
+  → app.parsers.<banco>.parse_pages/parse_pdf
+  → app.import_rules.reconcile_transactions
   → preview (NEW/MATCHED) no frontend
 ```
 
@@ -21,12 +36,16 @@ Todo parser devolve a mesma tupla:
 
 | Formato | Módulo | Como é reconhecido |
 | ------- | ------ | ------------------ |
-| OFX | `app.import_engine.parse_ofx` | extensão `.ofx` |
-| PDF do Itaú | `app.import_engine.parse_itau_pdf` (legado) | fallback para PDFs não reconhecidos |
+| OFX | `app.parsers.ofx.parse_ofx` | extensão `.ofx` |
+| PDF do Itaú | `app.parsers.itau.parse_pdf` | fallback para PDFs sem marcador de outro banco |
 | PDF do Mercado Pago | `app.parsers.mercadopago` | rodapé institucional ou título + coluna `ID da operação` |
 
-O Mercado Pago é o primeiro banco no pacote `app/parsers/`; o Itaú ainda usa o
-parser histórico em `app/import_engine.py` (Issue #12).
+As regras de negócio (classificação de transferência própria, categoria,
+id estável, conciliação e conta de destino) ficam em `app/import_rules.py`.
+Um parser novo não deve reimplementar nada disso: importe de lá.
+
+`app/import_engine.py` não tem mais lógica; ele só reexporta `import_rules` e
+os parsers para manter `scratch/*.py` e imports antigos funcionando.
 
 ## Como o parser do Mercado Pago foi desenhado
 
@@ -59,6 +78,11 @@ As partes voláteis ficam no topo de `app/parsers/mercadopago.py`:
 `LAYOUT`, `BANK_MARKER`, `TABLE_MARKERS`, `ANCHOR_RE`, `TOTALS_RE`, `PERIOD_RE`
 e constantes de agrupamento. Ajustar layout normalmente é editar só ali.
 
+O parser do Itaú segue o formato histórico `DD/MM/YYYY DESCRIÇÃO VALOR` e usa
+`page.extract_text()` (uma linha por lançamento). Ele foi movido de
+`import_engine.py` sem refatorar a extração — o próximo passo é criar um
+fixture anonimizado e migrá-lo para `read_pages`, como o Mercado Pago.
+
 ## Quando o PDF do banco mudar
 
 1. Guarde o PDF novo em local privado (não versionar).
@@ -72,20 +96,23 @@ e constantes de agrupamento. Ajustar layout normalmente é editar só ali.
    ```
 
    O script substitui CPF, agência e conta; revise nomes e descrições antes de
-   commitar.
+   commitar. Para o Itaú ainda não há fixture: o teste roda com uma página falsa
+   e o PDF real é opcional (`pytest -k itau` pula se o arquivo não existir).
 
 3. Rode os testes do banco:
 
    ```bash
    uv run pytest -k mercadopago -vv
+   uv run pytest -k itau -vv
    ```
 
    A mensagem de erro aponta qual total divergiu (ex.: `Saídas`), o que indica
    linha perdida, duplicada ou âncora que deixou de casar.
 
-4. Ajuste as constantes no topo do módulo. Se a mudança for estrutural (ex.:
-   lançamento em duas colunas, valor fora da âncora), ajuste `_collect_anchors`
-   e `_attach_descriptions` — nunca posicione colunas por coordenada absoluta.
+4. Ajuste as constantes no topo do módulo do banco. Se a mudança for estrutural
+   (ex.: lançamento em duas colunas, valor fora da âncora), ajuste
+   `_collect_anchors`/`_attach_descriptions` — nunca posicione colunas por
+   coordenada absoluta.
 5. Atualize `LAYOUT` e o campo `layout` do fixture, e troque o teste de
    `test_fixture_usa_o_layout_suportado` se necessário.
 6. Rode a suíte inteira (`uv run pytest`) antes de abrir o PR.
@@ -93,9 +120,11 @@ e constantes de agrupamento. Ajustar layout normalmente é editar só ali.
 ## Adicionar um banco novo
 
 1. Crie `app/parsers/<banco>.py` expondo `detect(pages)` e
-   `parse_pages(pages) -> (transactions, snapshots, account_guess)`.
+   `parse_pages(pages)` — ou `parse_pdf(file_bytes)` quando precisar do
+   binário, como o Itaú.
 2. Reutilize `TextLine`, `read_pages`, `parse_brl`, `join_description` e
-   `StatementFormatError` de `app/parsers/base.py`.
+   `StatementFormatError` de `app/parsers/base.py`, e as regras de
+   `app/import_rules.py`.
 3. Registre no `parse_pdf` de `app/parsers/__init__.py` **antes** do fallback do
    Itaú e inclua o nome em `SUPPORTED_FORMATS`.
 4. Crie fixture com `scripts/snapshot_pdf_layout.py` e testes no modelo de
@@ -112,15 +141,15 @@ e constantes de agrupamento. Ajustar layout normalmente é editar só ali.
 - **Sem posição absoluta de coluna.** Derive do conteúdo ou de âncoras.
 - **Fixture anonimizado e versionado.** É ele que transforma “o PDF mudou” em um
   teste que falha com diff legível.
-- **Parser novo = módulo novo.** Evite aumentar o `import_engine.py`; o
-  registro existe para isolar mudanças por banco.
+- **Parser novo = módulo novo.** Não volte a concentrar formatos em
+  `import_engine.py`: o registro existe para isolar mudanças por banco.
 
 ## Limitações conhecidas
 
-- O parser do Itaú ainda vive em `app/import_engine.py` e é o fallback do
-  registro (Issue #12).
-- O upload abre o PDF uma vez para detecção e outra no parser do Itaú; o
-  Mercado Pago aproveita a extração já feita.
+- O parser do Itaú ainda usa `page.extract_text()` e é o fallback do registro;
+  ele abre o PDF uma segunda vez (o Mercado Pago aproveita a extração já feita).
+- O upload responde `400` para extensão não suportada e `422` para PDF não
+  reconhecido ou layout que não fecha com os totais do extrato.
 - A confirmação da importação grava `payment_method="Pix"` para todos os itens,
   igual ao comportamento anterior de Itaú/OFX.
 - O frontend ainda mostra uma mensagem genérica no upload; o detalhe do

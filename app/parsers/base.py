@@ -30,6 +30,14 @@ class StatementFormatError(ValueError):
     """
 
 
+class UnsupportedFileFormatError(ValueError):
+    """Extensão de arquivo que nenhum parser do pacote atende.
+
+    Diferente de `StatementFormatError`: aqui o arquivo nem chegou a ser lido,
+    então o endpoint responde 400 (formato não suportado) em vez de 422.
+    """
+
+
 @dataclass(frozen=True)
 class TextLine:
     """Linha visual do PDF, com a coordenada vertical usada para agrupar.

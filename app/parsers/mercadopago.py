@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from statistics import median
 from typing import Sequence
 
-from ..import_engine import (
+from ..import_rules import (
     classify_transfer_type,
     is_self_transfer,
     stable_id,
