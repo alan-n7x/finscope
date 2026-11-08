@@ -14,8 +14,8 @@ verdade: **PostgreSQL**.
 - **Edição pelo extrato**: clique na linha (ou no ícone de lápis) para abrir o
   mesmo formulário de criação já preenchido; o salvamento usa `PATCH` e atualiza
   extrato, dashboard, fluxo de caixa e analytics sem recarregar a página.
-- **Importação de extratos**: OFX (Inter, Santander, Nubank...) e PDF do Itaú,
-  com preview, conciliação por conta e snapshots de saldo.
+- **Importação de extratos**: OFX (Inter, Santander, Nubank...), PDF do Itaú e
+  PDF do Mercado Pago, com preview, conciliação por conta e snapshots de saldo.
 - **Dívidas**: parcelas e vencimentos em aberto.
 - **Fluxo de caixa**: série diária de realizado vs. projetado.
 - **Analytics**: distribuição de gastos por categoria e comparativo mensal.
@@ -28,7 +28,7 @@ verdade: **PostgreSQL**.
 - **Backend:** FastAPI + SQLAlchemy 2.0 assíncrono (`asyncpg`), Pydantic v2
 - **Banco:** PostgreSQL 16 (Docker, volume persistente)
 - **Frontend:** React 19 + Vite + React Query, servido pelo próprio backend em `:8000`
-- **Importação:** OFX genérico (`ofxparse`) e PDF do Itaú (`pdfplumber`)
+- **Importação:** OFX genérico (`ofxparse`) e PDF do Itaú/Mercado Pago (`pdfplumber`)
 - **Extras:** bot do Telegram (`aiogram`), exportação `.xlsx` (`openpyxl`)
 
 ## Pré-requisitos
@@ -78,14 +78,16 @@ Documentação interativa: `http://localhost:8000/docs`.
 ## Como funciona a importação de extratos
 
 `POST /api/transactions/import/upload` aceita `.ofx` (Inter, Santander,
-Nubank...) ou `.pdf` do Itaú e devolve preview com status `NEW`/`MATCHED`,
-palpite de conta e snapshots de saldo. `POST /api/transactions/import/confirm`
-grava só os `NEW` (idempotente) e atualiza os saldos da conta correta.
+Nubank...), `.pdf` do Itaú ou `.pdf` do Mercado Pago e devolve preview com
+status `NEW`/`MATCHED`, palpite de conta e snapshots de saldo.
+`POST /api/transactions/import/confirm` grava só os `NEW` (idempotente) e
+atualiza os saldos da conta correta.
 
-Regras em `app/import_engine.py`:
+Regras em `app/import_engine.py` e `app/parsers/`:
 
-- **Ids estáveis**: FITID no OFX, hash `itau|data|valor|tipo|descrição` no PDF —
-  re-upload gera os mesmos `external_id` (`import:<id>`) e não duplica.
+- **Ids estáveis**: FITID no OFX, hash `itau|data|valor|tipo|descrição` no PDF
+  do Itaú e id da operação no PDF do Mercado Pago — re-upload gera os mesmos
+  `external_id` (`import:<id>`) e não duplica.
 - **Conciliação por conta**: valor + tipo iguais com tolerância de 2 dias, e
   mesma conta quando ambos os lados a informam (evita falso match entre as
   pernas de uma transferência Itaú ↔ Inter).
@@ -96,8 +98,14 @@ Regras em `app/import_engine.py`:
   pendências usadas no cálculo ignoram lançamentos na categoria
   `Transferência interna` (movimentação entre contas próprias não é consumo
   nem obrigação).
-- **Snapshots**: `SALDO DO DIA` + "saldo em conta" do cabeçalho (Itaú) e
-  `LEDGERBAL` (OFX); o dashboard ancora o saldo no snapshot mais recente.
+- **Snapshots**: `SALDO DO DIA` + "saldo em conta" do cabeçalho (Itaú),
+  `LEDGERBAL` (OFX) e `Saldo final` do período (Mercado Pago); o dashboard
+  ancora o saldo no snapshot mais recente.
+- **Layouts de PDF**: cada banco tem (ou terá) um módulo em `app/parsers/` com
+  detecção própria, extração por linha-âncora e validação contra os totais
+  impressos no próprio extrato — se o layout mudar, o upload falha com `422` e
+  uma mensagem acionável em vez de importar errado. Passo a passo em
+  [`docs/PARSERS.md`](docs/PARSERS.md).
 
 ### Edição de lançamentos
 
