@@ -416,8 +416,8 @@ async def upload_extrato(
         )
         
     db_txs = await FinanceRepository(session).list_transactions(limit=500)
-    reconciled_txs = import_engine.reconcile_transactions(txs, db_txs)
-    
+    reconciled_txs = import_rules.reconcile_transactions(txs, db_txs)
+
     return ImportPreviewResponse(transactions=reconciled_txs, account_guess=account_guess, snapshots=snapshots)
 
 
@@ -442,7 +442,7 @@ async def confirm_import(
     snapshots_count = 0
     try:
         service = TransactionService(session)
-        fallback_account = import_engine.resolve_import_account(
+        fallback_account = import_rules.resolve_import_account(
             payload.account, list(payload.transactions)
         )
         for t in payload.transactions:
