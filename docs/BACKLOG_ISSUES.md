@@ -180,6 +180,31 @@ Este documento centraliza as issues e o roadmap para guiar o desenvolvimento do 
 
 ---
 
+## 📌 Issue #15: Categorização Conservadora de Lançamentos
+* **Labels:** `data-quality`, `import`, `analytics`
+* **Status:** ✅ Concluído
+* **Descrição:** A importação gravava quase tudo em `Outros`, deixando o gráfico de Analytics com poucas categorias. As regras de descrição → categoria foram centralizadas e aplicadas na importação e no backfill.
+* **Tarefas:**
+  - [x] Criar `app/categorization.py` com normalização e regras conservadoras para as 10 categorias existentes.
+  - [x] Fazer `import_rules.suggest_category` delegar para as regras, valendo para OFX, Itaú e Mercado Pago.
+  - [x] Criar `scripts/recategorize_transactions.py` (dry-run por padrão) para lançamentos `import:%` em `Outros`.
+  - [x] Testes de marcas conhecidas e de descrições ambíguas que devem continuar em `Outros`.
+  - [x] Documentar em `docs/CATEGORIZATION.md`.
+
+---
+
+## 📌 Issue #16: Resumo de Analytics por Categoria no Backend
+* **Labels:** `analytics`, `backend`, `frontend`, `tech-debt`
+* **Status:** 📋 Backlog
+* **Descrição:** O gráfico de Analytics agrupa categorias no frontend a partir de `GET /api/transactions`, que tem limite padrão de 200 itens e duplica uma regra que já existe no dashboard.
+* **Tarefas:**
+  - [ ] Criar `GET /api/analytics/summary?month=YYYY-MM` agregando despesas `POSTED` por categoria e excluindo `Transferência interna`.
+  - [ ] Adicionar `AnalyticsSummaryResponse` em `app/schemas.py`.
+  - [ ] Trocar `useAnalytics`/`GetAnalyticsSummaryUseCase` para consumir o endpoint.
+  - [ ] Testes de contrato e de exclusão de transferência interna.
+
+---
+
 ## 🚀 Como Rodar no Linux:
 
 1. Subir o banco PostgreSQL:

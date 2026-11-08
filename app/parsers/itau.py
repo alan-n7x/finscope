@@ -111,6 +111,9 @@ def parse_pdf(file_bytes: bytes) -> ParserResult:
 
                 self_transfer = is_self_transfer(desc)
                 t_type = classify_transfer_type(desc, amount)
+                category = suggest_category(
+                    desc, self_transfer, amount=amount, tx_type=t_type
+                )
                 amount = abs(amount)
 
                 d, m, y = date_str.split("/")
@@ -126,7 +129,7 @@ def parse_pdf(file_bytes: bytes) -> ParserResult:
                         description=desc,
                         amount=amount,
                         status="NEW",
-                        category=suggest_category(desc, self_transfer),
+                        category=category,
                         account=BANK,
                     )
                 )

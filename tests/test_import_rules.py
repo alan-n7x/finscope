@@ -35,7 +35,8 @@ def test_classify_transfer_type_preserva_dashboard():
 def test_suggest_category():
     assert import_rules.suggest_category("PIX TRANSF ALAN DO14/10", True) == "Transferência interna"
     assert import_rules.suggest_category("Estorno Uber", False) == "Estorno / Reembolso"
-    assert import_rules.suggest_category("Padaria", False) == "Outros"
+    assert import_rules.suggest_category("Padaria", False) == "Alimentação"
+    assert import_rules.suggest_category("Pix enviado Ricardo", False) == "Outros"
 
 
 def test_reconcile_exige_mesma_conta_para_transfer_interna():

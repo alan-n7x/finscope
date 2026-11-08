@@ -43,6 +43,9 @@ def parse_ofx(file_bytes: bytes) -> ParserResult:
         description = stmt.memo or stmt.payee or "Transação Genérica"
         self_transfer = is_self_transfer(description)
         t_type = classify_transfer_type(description, amount)
+        category = suggest_category(
+            description, self_transfer, amount=amount, tx_type=t_type
+        )
         amount = abs(amount)
 
         fitid = (getattr(stmt, "id", None) or "").strip()
@@ -59,7 +62,7 @@ def parse_ofx(file_bytes: bytes) -> ParserResult:
                 description=description,
                 amount=amount,
                 status="NEW",
-                category=suggest_category(description, self_transfer),
+                category=category,
                 account=account_guess,
             )
         )
