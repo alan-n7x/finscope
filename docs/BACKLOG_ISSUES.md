@@ -145,6 +145,28 @@ Este documento centraliza as issues e o roadmap para guiar o desenvolvimento do 
 
 ---
 
+## 📌 Issue #12: Migrar Parser PDF do Itaú para `app/parsers`
+* **Labels:** `refactor`, `import`, `tech-debt`
+* **Status:** 📋 Backlog
+* **Descrição:** O parser do Itaú ainda vive em `app/import_engine.py` e é o fallback do registro; o Mercado Pago já segue o padrão de módulo por banco em `app/parsers/` (ver `docs/PARSERS.md`).
+* **Tarefas:**
+  - [ ] Mover `parse_itau_pdf` para `app/parsers/itau.py`, mantendo `import_engine.parse_itau_pdf` como alias.
+  - [ ] Reutilizar `read_pages` para não abrir o PDF duas vezes no upload.
+  - [ ] Criar fixture anonimizado do Itaú para testar sem depender de arquivo local.
+
+---
+
+## 📌 Issue #13: Exibir Detalhe do Erro de Importação no Frontend
+* **Labels:** `frontend`, `import`, `ux`
+* **Status:** 📋 Backlog
+* **Descrição:** O upload mostra "Erro ao processar arquivo." e descarta o `detail` do backend. Com parsers validando layout, a mensagem do `422` (ex.: qual total divergiu) precisa chegar ao usuário.
+* **Tarefas:**
+  - [ ] Ler o `detail` da resposta em `useUploadExtrato`.
+  - [ ] Exibir a mensagem no modal de importação em vez do alerta genérico.
+  - [ ] Cobrir com teste manual o caso de PDF com layout desconhecido.
+
+---
+
 ## 🚀 Como Rodar no Linux:
 
 1. Subir o banco PostgreSQL:

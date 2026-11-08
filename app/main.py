@@ -32,7 +32,7 @@ from app.schemas import (
     ImportPreviewResponse,
     ImportConfirmRequest
 )
-from app import import_engine
+from app import import_engine, parsers
 from contextlib import asynccontextmanager
 
 try:
@@ -386,27 +386,34 @@ async def upload_extrato(
     file: UploadFile = File(...),
     session: AsyncSession = Depends(get_db_session),
 ) -> ImportPreviewResponse:
-    """Processa OFX ou PDF do Itaú e devolve o preview com conciliação.
+    """Processa OFX, PDF do Itaú ou PDF do Mercado Pago e devolve o preview.
 
     Args:
         file: Arquivo enviado (.ofx ou .pdf).
         session: Sessão injetada pelo FastAPI.
 
     Raises:
-        HTTPException: 400 para formato não suportado.
+        HTTPException: 400 para extensão não suportada; 422 quando o PDF não é
+            reconhecido ou o layout não fecha com os totais do extrato.
 
     Returns:
         Transações (NEW/MATCHED), palpite de conta e snapshots de saldo.
     """
     content = await file.read()
     filename = file.filename.lower()
-    
+
     if filename.endswith(".ofx"):
         txs, snapshots, account_guess = import_engine.parse_ofx(content)
     elif filename.endswith(".pdf"):
-        txs, snapshots, account_guess = import_engine.parse_itau_pdf(content)
+        try:
+            txs, snapshots, account_guess = parsers.parse_pdf(content)
+        except parsers.StatementFormatError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     else:
-        raise HTTPException(status_code=400, detail="Formato não suportado. Envie OFX ou PDF (Itaú).")
+        raise HTTPException(
+            status_code=400,
+            detail="Formato não suportado. Envie OFX ou PDF (Itaú ou Mercado Pago).",
+        )
         
     db_txs = await FinanceRepository(session).list_transactions(limit=500)
     reconciled_txs = import_engine.reconcile_transactions(txs, db_txs)
