@@ -83,8 +83,8 @@ status `NEW`/`MATCHED`, palpite de conta e snapshots de saldo.
 `POST /api/transactions/import/confirm` grava só os `NEW` (idempotente) e
 atualiza os saldos da conta correta.
 
-Regras de negócio em `app/import_rules.py`; leitura de cada formato em
-`app/parsers/` (um módulo por banco).
+Regras de negócio em `app/import_rules.py` e `app/categorization.py`; leitura
+de cada formato em `app/parsers/` (um módulo por banco).
 
 - **Ids estáveis**: FITID no OFX, hash `itau|data|valor|tipo|descrição` no PDF
   do Itaú e id da operação no PDF do Mercado Pago — re-upload gera os mesmos
@@ -95,6 +95,11 @@ Regras de negócio em `app/import_rules.py`; leitura de cada formato em
 - **Transferências próprias** (`ALAN DO...`): saída → `Despesa`, entrada com
   "recebido" → `Transferência`, entrada Itaú sem "recebido" → `Receita`, sempre
   com categoria `Transferência interna` (preserva os sinais do dashboard).
+- **Categorização conservadora**: descrições com marcas conhecidas viram
+  `Alimentação`, `Transporte`, `Telefone`, `Assinaturas`, `Carro`, `Dívidas` ou
+  `Salário`; o resto continua em `Outros`. Regras em `app/categorization.py` e
+  backfill de lançamentos antigos em `scripts/recategorize_transactions.py`
+  ([guia](docs/CATEGORIZATION.md)).
 - **Analytics e limite diário**: receitas/despesas do mês, gasto do dia e
   pendências usadas no cálculo ignoram lançamentos na categoria
   `Transferência interna` (movimentação entre contas próprias não é consumo
