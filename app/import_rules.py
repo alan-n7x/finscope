@@ -10,6 +10,7 @@ import datetime
 import hashlib
 from typing import List
 
+from .categorization import categorize
 from .schemas import ImportTransaction
 
 SELF_TRANSFER_MARKERS = ("ALAN DO",)
@@ -31,23 +32,33 @@ def is_self_transfer(description: str) -> bool:
     return any(m in desc for m in SELF_TRANSFER_MARKERS)
 
 
-def suggest_category(description: str, is_self: bool) -> str:
-    """Sugere categoria para o preview sem quebrar o contrato do frontend.
+def suggest_category(
+    description: str,
+    is_self: bool,
+    *,
+    amount: float | None = None,
+    tx_type: str | None = None,
+) -> str:
+    """Sugere categoria para o preview usando as regras conservadoras.
+
+    A lógica fica em `app.categorization`; este wrapper mantém a assinatura
+    usada pelos parsers e pelo shim `import_engine`.
 
     Args:
         description: Descrição do lançamento como veio do extrato.
         is_self: Resultado de `is_self_transfer` para a descrição.
+        amount: Valor com sinal, quando disponível (ajuda a distinguir receita).
+        tx_type: Tipo já classificado ("Receita", "Despesa", "Transferência").
 
     Returns:
-        "Transferência interna" para movimentação própria, "Estorno /
-        Reembolso" para estornos e "Outros" nos demais casos.
+        Uma das categorias canônicas; ``Outros`` quando não há regra segura.
     """
-    desc = (description or "").upper()
-    if is_self:
-        return "Transferência interna"
-    if any(m in desc for m in ESTORNO_MARKERS):
-        return "Estorno / Reembolso"
-    return "Outros"
+    return categorize(
+        description,
+        is_self=is_self,
+        amount=amount,
+        tx_type=tx_type,
+    )
 
 
 def classify_transfer_type(description: str, amount: float) -> str:

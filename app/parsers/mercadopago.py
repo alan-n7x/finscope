@@ -289,17 +289,23 @@ def _to_transaction(anchor: _Anchor) -> ImportTransaction:
     """Converte a âncora já completa em lançamento do preview."""
     description = anchor.description.strip()
     self_transfer = is_self_transfer(description)
+    t_type = classify_transfer_type(description, anchor.amount)
     return ImportTransaction(
         # O id da operação é único e imutável no Mercado Pago: re-upload do
         # mesmo extrato gera o mesmo external_id mesmo se descrição/valor
         # mudarem de formatação.
         id=stable_id("mercadopago", anchor.operation_id),
         date=_iso_date(anchor.date),
-        type=classify_transfer_type(description, anchor.amount),
+        type=t_type,
         description=description,
         amount=abs(anchor.amount),
         status="NEW",
-        category=suggest_category(description, self_transfer),
+        category=suggest_category(
+            description,
+            self_transfer,
+            amount=anchor.amount,
+            tx_type=t_type,
+        ),
         account=BANK,
     )
 
