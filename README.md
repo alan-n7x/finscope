@@ -83,8 +83,7 @@ status `NEW`/`MATCHED`, palpite de conta e snapshots de saldo.
 `POST /api/transactions/import/confirm` grava só os `NEW` (idempotente) e
 atualiza os saldos da conta correta.
 
-Regras de negócio em `app/import_rules.py`; leitura de cada formato em
-`app/parsers/` (um módulo por banco).
+Regras em `app/import_engine.py` e `app/parsers/`:
 
 - **Ids estáveis**: FITID no OFX, hash `itau|data|valor|tipo|descrição` no PDF
   do Itaú e id da operação no PDF do Mercado Pago — re-upload gera os mesmos
@@ -102,11 +101,11 @@ Regras de negócio em `app/import_rules.py`; leitura de cada formato em
 - **Snapshots**: `SALDO DO DIA` + "saldo em conta" do cabeçalho (Itaú),
   `LEDGERBAL` (OFX) e `Saldo final` do período (Mercado Pago); o dashboard
   ancora o saldo no snapshot mais recente.
-- **Layouts de PDF**: cada banco tem um módulo em `app/parsers/`
-  (`ofx.py`, `itau.py`, `mercadopago.py`) com detecção e extração próprias; o
-  Mercado Pago ainda valida contra os totais impressos no extrato — se o
-  layout mudar, o upload falha com `422` e uma mensagem acionável em vez de
-  importar errado. Passo a passo em [`docs/PARSERS.md`](docs/PARSERS.md).
+- **Layouts de PDF**: cada banco tem (ou terá) um módulo em `app/parsers/` com
+  detecção própria, extração por linha-âncora e validação contra os totais
+  impressos no próprio extrato — se o layout mudar, o upload falha com `422` e
+  uma mensagem acionável em vez de importar errado. Passo a passo em
+  [`docs/PARSERS.md`](docs/PARSERS.md).
 
 ### Edição de lançamentos
 

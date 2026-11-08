@@ -32,7 +32,7 @@ from app.schemas import (
     ImportPreviewResponse,
     ImportConfirmRequest
 )
-from app import import_rules, parsers
+from app import import_engine, parsers
 from contextlib import asynccontextmanager
 
 try:
@@ -400,14 +400,21 @@ async def upload_extrato(
         Transações (NEW/MATCHED), palpite de conta e snapshots de saldo.
     """
     content = await file.read()
+    filename = file.filename.lower()
 
-    try:
-        txs, snapshots, account_guess = parsers.parse_statement(file.filename, content)
-    except parsers.UnsupportedFileFormatError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except parsers.StatementFormatError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
+    if filename.endswith(".ofx"):
+        txs, snapshots, account_guess = import_engine.parse_ofx(content)
+    elif filename.endswith(".pdf"):
+        try:
+            txs, snapshots, account_guess = parsers.parse_pdf(content)
+        except parsers.StatementFormatError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Formato não suportado. Envie OFX ou PDF (Itaú ou Mercado Pago).",
+        )
+        
     db_txs = await FinanceRepository(session).list_transactions(limit=500)
     reconciled_txs = import_rules.reconcile_transactions(txs, db_txs)
 

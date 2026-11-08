@@ -10,9 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from app import import_rules
+from app import import_engine
 from app.parsers import StatementFormatError, mercadopago, parse_pdf
-from app.parsers import itau
 from app.parsers.base import TextLine
 
 FIXTURE = Path(__file__).parent / "fixtures" / "mercadopago" / "statement_2026-11.json"
@@ -44,13 +43,13 @@ def test_fixture_usa_o_layout_suportado():
 def test_detect_reconhece_mercadopago_pelo_conteudo():
     assert mercadopago.detect(load_pages()) is True
 
-    itau_lines = [
+    itau = [
         [
             TextLine(top=10.0, text="Itaú Unibanco"),
             TextLine(top=20.0, text="SALDO DO DIA 14/08/2026 18,50"),
         ]
     ]
-    assert mercadopago.detect(itau_lines) is False
+    assert mercadopago.detect(itau) is False
 
 
 def test_extrai_todos_os_lancamentos_do_periodo():
@@ -124,7 +123,7 @@ def test_ids_sao_estaveis_e_baseados_no_id_da_operacao():
 
     assert [t.id for t in txs] == [t.id for t in txs_again]
     assert len({t.id for t in txs}) == len(txs)
-    assert txs[0].id == import_rules.stable_id("mercadopago", "187493064300")
+    assert txs[0].id == import_engine.stable_id("mercadopago", "187493064300")
 
 
 def test_snapshot_usa_o_saldo_final_na_data_de_fechamento_do_periodo():
@@ -190,8 +189,8 @@ def test_cabecalho_com_movimentacao_e_sem_ancora_falha():
 def test_parse_pdf_delega_para_o_parser_do_banco(monkeypatch):
     monkeypatch.setattr("app.parsers.read_pages", lambda _: load_pages())
     monkeypatch.setattr(
-        itau,
-        "parse_pdf",
+        import_engine,
+        "parse_itau_pdf",
         lambda _: pytest.fail("não deveria chamar o parser do Itaú"),
     )
 
@@ -210,8 +209,8 @@ def test_parse_pdf_desconhecido_falha_com_mensagem_acionavel(monkeypatch):
     itau_pages = [[TextLine(top=10.0, text="EXTRATO DE CONTA")]]
     monkeypatch.setattr("app.parsers.read_pages", lambda _: itau_pages)
     monkeypatch.setattr(
-        itau,
-        "parse_pdf",
+        import_engine,
+        "parse_itau_pdf",
         lambda _: ([], [], "Itaú - Conta corrente"),
     )
 

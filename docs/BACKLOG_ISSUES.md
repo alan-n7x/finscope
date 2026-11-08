@@ -147,12 +147,11 @@ Este documento centraliza as issues e o roadmap para guiar o desenvolvimento do 
 
 ## 📌 Issue #12: Migrar Parser PDF do Itaú para `app/parsers`
 * **Labels:** `refactor`, `import`, `tech-debt`
-* **Status:** 🚧 Parcial
-* **Descrição:** O parser do Itaú foi movido para `app/parsers/itau.py` (PR de parsers por banco), mas ainda usa `page.extract_text()` e abre o PDF uma segunda vez na detecção.
+* **Status:** 📋 Backlog
+* **Descrição:** O parser do Itaú ainda vive em `app/import_engine.py` e é o fallback do registro; o Mercado Pago já segue o padrão de módulo por banco em `app/parsers/` (ver `docs/PARSERS.md`).
 * **Tarefas:**
-  - [x] Mover `parse_itau_pdf` para `app/parsers/itau.py`.
-  - [x] Manter `import_engine.parse_itau_pdf` como alias de compatibilidade.
-  - [ ] Migrar a extração para `read_pages` para não abrir o PDF duas vezes.
+  - [ ] Mover `parse_itau_pdf` para `app/parsers/itau.py`, mantendo `import_engine.parse_itau_pdf` como alias.
+  - [ ] Reutilizar `read_pages` para não abrir o PDF duas vezes no upload.
   - [ ] Criar fixture anonimizado do Itaú para testar sem depender de arquivo local.
 
 ---
@@ -165,18 +164,6 @@ Este documento centraliza as issues e o roadmap para guiar o desenvolvimento do 
   - [ ] Ler o `detail` da resposta em `useUploadExtrato`.
   - [ ] Exibir a mensagem no modal de importação em vez do alerta genérico.
   - [ ] Cobrir com teste manual o caso de PDF com layout desconhecido.
-
----
-
-## 📌 Issue #14: Separar Regras de Importação dos Parsers
-* **Labels:** `refactor`, `import`
-* **Status:** ✅ Concluído
-* **Descrição:** `app/import_engine.py` concentrava regras de negócio e leitura de arquivos. As regras foram para `app/import_rules.py` e cada formato ganhou um módulo em `app/parsers/` (`ofx.py`, `itau.py`, `mercadopago.py`); o `import_engine` virou shim de compatibilidade.
-* **Tarefas:**
-  - [x] Mover classificação, categoria, id estável, conciliação e conta para `app/import_rules.py`.
-  - [x] Mover OFX e Itaú para `app/parsers/` mantendo os nomes antigos como alias.
-  - [x] Centralizar o despacho em `parsers.parse_statement` (400 para formato desconhecido, 422 para layout inválido).
-  - [x] Dividir os testes por módulo (`test_import_rules.py`, `test_ofx_parser.py`, `test_itau_parser.py`).
 
 ---
 
