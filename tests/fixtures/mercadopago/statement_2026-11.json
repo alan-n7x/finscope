@@ -1,0 +1,190 @@
+{
+  "bank": "mercadopago",
+  "layout": "mercadopago-2026-11",
+  "pages": [
+    [
+      {
+        "top": 32.53,
+        "text": "EXTRATO DE CONTA"
+      },
+      {
+        "top": 42.04,
+        "text": "Alan Dos Santos Oliveira"
+      },
+      {
+        "top": 51.37,
+        "text": "CPF/CNPJ: 000.000.000-00 Agência: 0 Conta: 0"
+      },
+      {
+        "top": 60.71,
+        "text": "Periodo: De 01-11-2026 al 05-11-2026"
+      },
+      {
+        "top": 100.84,
+        "text": "Entradas: R$ 1.242,81"
+      },
+      {
+        "top": 107.36,
+        "text": "Saldo inicial: R$ 0,00 Saldo final: R$ 758,87"
+      },
+      {
+        "top": 113.92,
+        "text": "Saidas: R$ -483,94"
+      },
+      {
+        "top": 158.75,
+        "text": "DETALHE DOS MOVIMENTOS"
+      },
+      {
+        "top": 184.59,
+        "text": "Data Descrição ID da operação Valor Saldo"
+      },
+      {
+        "top": 209.59,
+        "text": "Pix recebido ALAN DOS"
+      },
+      {
+        "top": 216.41,
+        "text": "03-11-2026 187493064300 R$ 1.242,00 R$ 1.242,00"
+      },
+      {
+        "top": 221.59,
+        "text": "SANTOS OLIVEIRA"
+      },
+      {
+        "top": 244.84,
+        "text": "Pagamento com Pix Rogeris"
+      },
+      {
+        "top": 251.66,
+        "text": "03-11-2026 187510199134 R$ -75,00 R$ 1.167,00"
+      },
+      {
+        "top": 256.84,
+        "text": "Nascimento Sobrinho"
+      },
+      {
+        "top": 280.09,
+        "text": "Pagamento de conta BANCO"
+      },
+      {
+        "top": 286.91,
+        "text": "03-11-2026 187558364056 R$ -96,04 R$ 1.070,96"
+      },
+      {
+        "top": 292.09,
+        "text": "PAN S/A"
+      },
+      {
+        "top": 315.34,
+        "text": "Pix enviado Ricardo Pereira"
+      },
+      {
+        "top": 322.16,
+        "text": "03-11-2026 186552087419 R$ -100,00 R$ 970,96"
+      },
+      {
+        "top": 327.34,
+        "text": "da Silva"
+      },
+      {
+        "top": 350.59,
+        "text": "Pagamento com Pix BUS PAY"
+      },
+      {
+        "top": 357.41,
+        "text": "03-11-2026 187612462864 R$ -5,00 R$ 965,96"
+      },
+      {
+        "top": 362.59,
+        "text": "S.A"
+      },
+      {
+        "top": 389.21,
+        "text": "04-11-2026 Rendimentos 1752629412525 R$ 0,44 R$ 966,40"
+      },
+      {
+        "top": 419.21,
+        "text": "04-11-2026 Pagamento Totalpass 187670194296 R$ -89,90 R$ 876,50"
+      },
+      {
+        "top": 449.21,
+        "text": "05-11-2026 Rendimentos 1752705951088 R$ 0,37 R$ 876,87"
+      },
+      {
+        "top": 475.84,
+        "text": "Pix enviado Alan dos Santos"
+      },
+      {
+        "top": 482.66,
+        "text": "05-11-2026 186801082187 R$ -55,00 R$ 821,87"
+      },
+      {
+        "top": 487.84,
+        "text": "Oliveira"
+      },
+      {
+        "top": 511.09,
+        "text": "Pix enviado Alan dos Santos"
+      },
+      {
+        "top": 517.91,
+        "text": "05-11-2026 186875109279 R$ -30,00 R$ 791,87"
+      },
+      {
+        "top": 523.09,
+        "text": "Oliveira"
+      },
+      {
+        "top": 612.79,
+        "text": "1/2"
+      }
+    ],
+    [
+      {
+        "top": 42.92,
+        "text": "Data Descrição ID da operação Valor Saldo"
+      },
+      {
+        "top": 67.91,
+        "text": "Pagamento com Pix Jodemir"
+      },
+      {
+        "top": 74.74,
+        "text": "05-11-2026 186928056793 R$ -33,00 R$ 758,87"
+      },
+      {
+        "top": 79.91,
+        "text": "Holanda Sobrinho"
+      },
+      {
+        "top": 555.89,
+        "text": "Data de geração: 06-11-2026"
+      },
+      {
+        "top": 570.89,
+        "text": "Você tem alguma dúvida? Conte com o nosso Portal de ajuda para encontrar informações sobre nossos produtos e serviços. Se deseja falar com"
+      },
+      {
+        "top": 578.39,
+        "text": "o nosso SAC, ligue para 0800 637 7246. Você precisará de um código de atendimento para nos contatar. Se já nos contatou e precisa de ajuda"
+      },
+      {
+        "top": 585.89,
+        "text": "da ouvidoria, ligue para 0800 688 4365 com o protocolo do primeiro atendimento."
+      },
+      {
+        "top": 600.89,
+        "text": "Mercado Pago Instituição de Pagamento Ltda. CNPJ n.º 10.573.521/0001-91. Av. das Nações Unidas, nº 3.003, Bonfim, Osasco SP - CEP 06233-"
+      },
+      {
+        "top": 608.39,
+        "text": "903. Encontre nossos canais de consulta em:www.mercadopago.com.br"
+      },
+      {
+        "top": 612.79,
+        "text": "2/2"
+      }
+    ]
+  ]
+}
