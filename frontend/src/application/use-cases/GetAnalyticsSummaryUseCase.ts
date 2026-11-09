@@ -1,15 +1,19 @@
-import { Transaction } from '../../domain/entities/Transaction';
+import type { IAnalyticsRepository } from '../../domain/repositories/IAnalyticsRepository';
 import { CategoryAnalytics } from '../../domain/value-objects/CategoryAnalytics';
 import type { CategoryItemProps } from '../../domain/value-objects/CategoryAnalytics';
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Alimentação': '#ef4444',
-  'Dívidas': '#f59e0b',
+  'Assinaturas': '#8b5cf6',
   'Carro': '#3b82f6',
+  'Dívidas': '#f59e0b',
+  'Estorno / Reembolso': '#06b6d4',
+  'Outros': '#94a3b8',
+  'Salário': '#10b981',
+  'Telefone': '#ec4899',
+  'Transferência interna': '#64748b',
   'Transporte': '#60a5fa',
   'Moradia': '#8b5cf6',
-  'Telefone': '#ec4899',
-  'Outros': '#94a3b8',
 };
 
 const DEFAULT_COLOR_PALETTE = [
@@ -17,34 +21,25 @@ const DEFAULT_COLOR_PALETTE = [
   '#ec4899', '#10b981', '#06b6d4', '#64748b'
 ];
 
-const INTERNAL_TRANSFER_CATEGORY = 'Transferência interna';
-
 export class GetAnalyticsSummaryUseCase {
-  executeCategoryDistribution(transactions: Transaction[]): CategoryAnalytics {
-    const categoryTotals: Record<string, number> = {};
-    let totalExpenses = 0;
+  private repository: IAnalyticsRepository;
 
-    for (const tx of transactions) {
-      if (tx.isExpense() && tx.isPaid() && tx.category !== INTERNAL_TRANSFER_CATEGORY) {
-        const cat = tx.category || 'Outros';
-        categoryTotals[cat] = (categoryTotals[cat] || 0) + tx.amount;
-        totalExpenses += tx.amount;
-      }
-    }
+  constructor(repository: IAnalyticsRepository) {
+    this.repository = repository;
+  }
 
-    const items: CategoryItemProps[] = Object.entries(categoryTotals)
-      .map(([name, value], idx) => {
-        const percentage = totalExpenses > 0 ? (value / totalExpenses) * 100 : 0;
-        const color = CATEGORY_COLORS[name] || DEFAULT_COLOR_PALETTE[idx % DEFAULT_COLOR_PALETTE.length];
-        return {
-          name,
-          value: Number(value.toFixed(2)),
-          percentage: Number(percentage.toFixed(1)),
-          color,
-        };
-      })
-      .sort((a, b) => b.value - a.value);
+  async execute(month?: string): Promise<CategoryAnalytics> {
+    const summary = await this.repository.getSummary(month);
 
-    return new CategoryAnalytics(items);
+    const items: CategoryItemProps[] = summary.categories.map((category, idx) => ({
+      name: category.name,
+      value: category.value,
+      percentage: category.percentage,
+      color:
+        CATEGORY_COLORS[category.name] ||
+        DEFAULT_COLOR_PALETTE[idx % DEFAULT_COLOR_PALETTE.length],
+    }));
+
+    return new CategoryAnalytics(items, summary.total_expenses);
   }
 }

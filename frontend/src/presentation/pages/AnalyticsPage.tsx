@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useTransactions } from '../../application/hooks/useTransactions';
 import { useDashboard } from '../../application/hooks/useDashboard';
 import { AnalyticsSection } from '../features/analytics/AnalyticsSection';
 import { PeriodSelector, currentPeriod } from '../features/dashboard/PeriodSelector';
@@ -7,7 +6,6 @@ import { PeriodSelector, currentPeriod } from '../features/dashboard/PeriodSelec
 export const AnalyticsPage: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(currentPeriod());
   const { data: dashboardData } = useDashboard(selectedMonth);
-  const { data: transactions = [] } = useTransactions({ month: selectedMonth });
 
   return (
     <div className="page-content">
@@ -19,7 +17,7 @@ export const AnalyticsPage: React.FC = () => {
         <PeriodSelector value={selectedMonth} onChange={setSelectedMonth} />
       </div>
 
-      <AnalyticsSection transactions={transactions} summary={dashboardData?.summary} />
+      <AnalyticsSection month={selectedMonth} summary={dashboardData?.summary} />
     </div>
   );
 };
