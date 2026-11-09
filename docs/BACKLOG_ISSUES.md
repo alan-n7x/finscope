@@ -195,13 +195,13 @@ Este documento centraliza as issues e o roadmap para guiar o desenvolvimento do 
 
 ## 📌 Issue #16: Resumo de Analytics por Categoria no Backend
 * **Labels:** `analytics`, `backend`, `frontend`, `tech-debt`
-* **Status:** 📋 Backlog
-* **Descrição:** O gráfico de Analytics agrupa categorias no frontend a partir de `GET /api/transactions`, que tem limite padrão de 200 itens e duplica uma regra que já existe no dashboard.
+* **Status:** ✅ Concluído
+* **Descrição:** O gráfico de Analytics agrupava categorias no frontend a partir de `GET /api/transactions`, que tem limite padrão de 200 itens e duplicava uma regra que já existe no dashboard. A agregação passou para o backend.
 * **Tarefas:**
-  - [ ] Criar `GET /api/analytics/summary?month=YYYY-MM` agregando despesas `POSTED` por categoria e excluindo `Transferência interna`.
-  - [ ] Adicionar `AnalyticsSummaryResponse` em `app/schemas.py`.
-  - [ ] Trocar `useAnalytics`/`GetAnalyticsSummaryUseCase` para consumir o endpoint.
-  - [ ] Testes de contrato e de exclusão de transferência interna.
+  - [x] Criar `GET /api/analytics/summary?month=YYYY-MM` agregando despesas `POSTED` por categoria e excluindo `Transferência interna`.
+  - [x] Adicionar `AnalyticsSummaryResponse` em `app/schemas.py`.
+  - [x] Trocar `useAnalytics`/`GetAnalyticsSummaryUseCase` para consumir o endpoint.
+  - [x] Testes de contrato e de exclusão de transferência interna.
 
 ---
 

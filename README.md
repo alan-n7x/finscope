@@ -103,7 +103,8 @@ de cada formato em `app/parsers/` (um módulo por banco).
 - **Analytics e limite diário**: receitas/despesas do mês, gasto do dia e
   pendências usadas no cálculo ignoram lançamentos na categoria
   `Transferência interna` (movimentação entre contas próprias não é consumo
-  nem obrigação).
+  nem obrigação). O gráfico por categoria usa `GET /api/analytics/summary`,
+  que aplica a mesma regra no backend.
 - **Snapshots**: `SALDO DO DIA` + "saldo em conta" do cabeçalho (Itaú),
   `LEDGERBAL` (OFX) e `Saldo final` do período (Mercado Pago); o dashboard
   ancora o saldo no snapshot mais recente.
@@ -154,14 +155,17 @@ atualiza sozinha:
 
 | Query key | Tela impactada |
 | --------- | -------------- |
-| `transactions` | Extrato e gráficos do Analytics |
+| `transactions` | Extrato |
 | `transaction` | Detalhe do lançamento no modal |
-| `dashboard` | Dashboard, Dívidas e resumo do Analytics |
+| `dashboard` | Dashboard, Dívidas e comparativo mensal do Analytics |
+| `analytics` | Distribuição de gastos por categoria no Analytics |
 | `cash-flow` | Fluxo de caixa |
 | `filter-options` | Opções de filtros (categorias, contas, formas) |
 
-Analytics não tem endpoint próprio: é derivado no cliente de `transactions` +
-`dashboard`, portanto é atualizado pelas mesmas invalidações.
+O gráfico de categorias do Analytics consome `GET /api/analytics/summary`, que
+agrega no backend as despesas confirmadas do mês e ignora `Transferência
+interna`. Assim o gráfico não depende do limite de 200 itens de
+`GET /api/transactions` e usa a mesma regra do dashboard.
 
 ## Endpoints principais
 
@@ -170,6 +174,7 @@ Analytics não tem endpoint próprio: é derivado no cliente de `transactions` +
 | GET | `/health` | Saúde do app + banco |
 | GET | `/api/dashboard?month=&date=` | Saldos, mês e limite diário |
 | GET | `/api/dashboard/cash-flow?month=&date=` | Série diária realizado/projetado |
+| GET | `/api/analytics/summary?month=` | Despesas confirmadas por categoria |
 | GET | `/api/transactions?...` | Extrato com filtros |
 | GET | `/api/transactions/{id}` | Consulta um lançamento |
 | POST | `/api/transactions` | Lançamento manual |

@@ -86,7 +86,7 @@ O script é idempotente: depois de aplicar, uma nova execução não encontra ma
 
 - É heurística: regras conservadoras deixam muitos lançamentos em `Outros` de
   propósito. Categorias editadas manualmente têm prioridade e não são tocadas.
-- A agregação do gráfico de Analytics ainda é feita no frontend; mover para um
-  endpoint no backend é a próxima PR (Issue #16).
+- O gráfico de Analytics consome `GET /api/analytics/summary`; a agregação fica
+  no backend e exclui `Transferência interna`.
 - O preview de importação ainda não permite trocar a categoria sugerida; isso
-  também fica para a evolução da UX de importação.
+  fica para a evolução da UX de importação.
