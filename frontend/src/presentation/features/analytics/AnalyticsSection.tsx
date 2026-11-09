@@ -2,16 +2,15 @@ import React from 'react';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { MonthlyTrendChart } from './MonthlyTrendChart';
 import { useAnalytics } from '../../../application/hooks/useAnalytics';
-import { Transaction } from '../../../domain/entities/Transaction';
 import { FinancialSummary } from '../../../domain/value-objects/FinancialSummary';
 
 interface AnalyticsSectionProps {
-  transactions: Transaction[];
+  month: string;
   summary?: FinancialSummary;
 }
 
-export const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({ transactions, summary }) => {
-  const { categoryData, totalExpenses } = useAnalytics(transactions);
+export const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({ month, summary }) => {
+  const { categoryData, totalExpenses } = useAnalytics(month);
 
   return (
     <section className="analytics-section">

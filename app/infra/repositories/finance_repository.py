@@ -27,6 +27,37 @@ from app.services.cash_balance import compute_cash_balance
 # representa consumo, receita nem obrigação nova, então fica fora dos agregados
 # de receita/despesa, do gasto do dia e das pendências do limite diário.
 INTERNAL_TRANSFER_CATEGORY = "Transferência interna"
+FALLBACK_CATEGORY = "Outros"
+
+
+def _resolve_month_range(month: Optional[str]) -> tuple[str, datetime.date, datetime.date]:
+    """Resolve um mês ``YYYY-MM`` no intervalo [primeiro dia, mês seguinte).
+
+    Args:
+        month: Mês alvo; quando omitido, usa o mês corrente.
+
+    Raises:
+        ValueError: Quando o formato não é ``YYYY-MM`` ou o mês é inválido.
+
+    Returns:
+        Tupla com o mês normalizado, data inicial (inclusiva) e final (exclusiva).
+    """
+    if month is None:
+        start = datetime.date.today().replace(day=1)
+    else:
+        try:
+            year_str, month_str = month.split("-")
+            if len(year_str) != 4 or len(month_str) != 2:
+                raise ValueError
+            start = datetime.date(int(year_str), int(month_str), 1)
+        except (ValueError, AttributeError) as exc:
+            raise ValueError("Use o mês no formato YYYY-MM (ex.: 2026-11).") from exc
+
+    if start.month == 12:
+        end = datetime.date(start.year + 1, 1, 1)
+    else:
+        end = datetime.date(start.year, start.month + 1, 1)
+    return start.strftime("%Y-%m"), start, end
 
 
 def _exclude_internal_transfers():
@@ -323,6 +354,71 @@ class FinanceRepository:
             "free_after_reserve": round(float(free_after_reserve), 2),
             "accounts": accounts_list,
             **daily_limit,
+        }
+
+    async def get_analytics_summary(self, month: Optional[str] = None) -> dict[str, Any]:
+        """Agrega as despesas confirmadas do mês por categoria.
+
+        Considera apenas lançamentos `EXPENSE` com status `POSTED` dentro do
+        mês alvo e ignora `Transferência interna`, que é movimentação entre
+        contas do próprio titular. Lançamentos sem categoria entram em `Outros`.
+
+        Args:
+            month: Mês no formato ``YYYY-MM``; quando omitido, usa o corrente.
+
+        Raises:
+            ValueError: Quando o mês não está no formato esperado.
+
+        Returns:
+            Dicionário com mês, total de despesas e categorias ordenadas por
+            valor decrescente (nome, valor e percentual).
+        """
+        target_month, start_date, end_date = _resolve_month_range(month)
+
+        total_expr = func.coalesce(func.sum(Transaction.amount), Decimal("0.00"))
+        stmt = (
+            select(Category.name, total_expr)
+            .select_from(Transaction)
+            .outerjoin(Category, Transaction.category_id == Category.id)
+            .where(
+                Transaction.type == TransactionType.EXPENSE,
+                Transaction.status == TransactionStatus.POSTED,
+                Transaction.date >= start_date,
+                Transaction.date < end_date,
+                _exclude_internal_transfers(),
+            )
+            .group_by(Category.name)
+        )
+        rows = (await self.session.execute(stmt)).all()
+
+        # Categoria nula e a categoria "Outros" representam o mesmo grupo.
+        totals: dict[str, Decimal] = {}
+        for name, value in rows:
+            key = name or FALLBACK_CATEGORY
+            totals[key] = totals.get(key, Decimal("0.00")) + value
+
+        total_expenses = sum(totals.values(), Decimal("0.00"))
+        categories = []
+        for name, value in sorted(
+            totals.items(), key=lambda item: (-item[1], item[0])
+        ):
+            percentage = (
+                (value / total_expenses) * 100
+                if total_expenses > 0
+                else Decimal("0.00")
+            )
+            categories.append(
+                {
+                    "name": name,
+                    "value": round(float(value), 2),
+                    "percentage": round(float(percentage), 1),
+                }
+            )
+
+        return {
+            "month": target_month,
+            "total_expenses": round(float(total_expenses), 2),
+            "categories": categories,
         }
 
     async def get_filter_options(self) -> dict[str, Any]:

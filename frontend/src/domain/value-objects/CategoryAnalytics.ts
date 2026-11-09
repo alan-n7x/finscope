@@ -7,9 +7,11 @@ export interface CategoryItemProps {
 
 export class CategoryAnalytics {
   private items: CategoryItemProps[];
+  private totalExpense?: number;
 
-  constructor(items: CategoryItemProps[]) {
+  constructor(items: CategoryItemProps[], totalExpense?: number) {
     this.items = items;
+    this.totalExpense = totalExpense;
   }
 
   getItems(): CategoryItemProps[] {
@@ -17,6 +19,9 @@ export class CategoryAnalytics {
   }
 
   getTotalExpense(): number {
+    if (this.totalExpense !== undefined) {
+      return this.totalExpense;
+    }
     return this.items.reduce((acc, item) => acc + item.value, 0);
   }
 }
