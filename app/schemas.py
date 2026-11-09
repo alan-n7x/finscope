@@ -27,6 +27,18 @@ class DashboardSummaryResponse(BaseModel):
     status: str = "NORMAL"
 
 
+class AnalyticsCategoryItem(BaseModel):
+    name: str
+    value: float
+    percentage: float
+
+
+class AnalyticsSummaryResponse(BaseModel):
+    month: str
+    total_expenses: float
+    categories: list[AnalyticsCategoryItem]
+
+
 class TransactionItem(BaseModel):
     id: str
     date: str

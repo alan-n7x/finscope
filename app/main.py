@@ -20,6 +20,7 @@ from app.services.transaction_service import (
     TransactionService,
 )
 from app.schemas import (
+    AnalyticsSummaryResponse,
     BalanceUpdateRequest,
     BalanceUpdateResponse,
     CashFlowResponse,
@@ -115,6 +116,31 @@ async def get_dashboard(
     repo = FinanceRepository(session)
     summary = await repo.get_dashboard_summary(month=month, date=date)
     return DashboardSummaryResponse(**summary)
+
+
+@app.get("/api/analytics/summary", response_model=AnalyticsSummaryResponse)
+async def get_analytics_summary(
+    month: str | None = Query(default=None, description="Mes no formato YYYY-MM"),
+    session: AsyncSession = Depends(get_db_session),
+) -> AnalyticsSummaryResponse:
+    """Agrega as despesas confirmadas do mês por categoria.
+
+    Args:
+        month: Mês no formato YYYY-MM (padrão: mês corrente).
+        session: Sessão injetada pelo FastAPI.
+
+    Raises:
+        HTTPException: 422 quando o mês não está no formato YYYY-MM.
+
+    Returns:
+        Total de despesas e distribuição por categoria, sem transferências
+        internas, conforme `AnalyticsSummaryResponse`.
+    """
+    try:
+        summary = await FinanceRepository(session).get_analytics_summary(month=month)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return AnalyticsSummaryResponse(**summary)
 
 
 @app.post("/api/accounts/{account_name}/balance", response_model=BalanceUpdateResponse)
