@@ -76,6 +76,8 @@ cd frontend && npm install && npm run dev
 - Backend: `http://localhost:8000` (salvar um `.py` reinicia o Uvicorn).
 - Frontend: `http://localhost:5173` (HMR; proxy `/api` → `:8000`).
 - Docs: `http://localhost:8000/docs`.
+- Consulta ad-hoc no Postgres do container, sem escaping de aspas:
+  `./scripts/psql.sh -c "SELECT count(*) FROM transactions;"`.
 
 Se preferir o backend fora do Docker, o banco continua no container:
 
