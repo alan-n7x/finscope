@@ -100,6 +100,9 @@ de cada formato em `app/parsers/` (um módulo por banco).
   `Salário`; o resto continua em `Outros`. Regras em `app/categorization.py` e
   backfill de lançamentos antigos em `scripts/recategorize_transactions.py`
   ([guia](docs/CATEGORIZATION.md)).
+- **Categoria revisável no preview**: o upload sugere a categoria e o modal de
+  importação permite trocá-la nos itens `NEW` antes de confirmar. Itens
+  `MATCHED`/`IGNORED` não são gravados, então o seletor fica desabilitado.
 - **Analytics e limite diário**: receitas/despesas do mês, gasto do dia e
   pendências usadas no cálculo ignoram lançamentos na categoria
   `Transferência interna` (movimentação entre contas próprias não é consumo

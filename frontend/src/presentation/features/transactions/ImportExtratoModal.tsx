@@ -2,8 +2,22 @@ import React, { useRef, useState } from 'react';
 import { UploadCloud, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { useUploadExtrato, useConfirmImport } from '../../../application/hooks/useImport';
 import type { ImportTransaction, BalanceSnapshot } from '../../../application/hooks/useImport';
+import { useFilterOptions } from '../../../application/hooks/useTransactions';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
+
+const FALLBACK_CATEGORIES = [
+  'Alimentação',
+  'Assinaturas',
+  'Carro',
+  'Dívidas',
+  'Estorno / Reembolso',
+  'Outros',
+  'Salário',
+  'Telefone',
+  'Transferência interna',
+  'Transporte',
+];
 
 interface ImportExtratoModalProps {
   isOpen: boolean;
@@ -18,6 +32,8 @@ export const ImportExtratoModal: React.FC<ImportExtratoModalProps> = ({ isOpen, 
 
   const uploadExtrato = useUploadExtrato();
   const confirmImport = useConfirmImport();
+  const { data: options } = useFilterOptions();
+  const categories = options?.categories?.length ? options.categories : FALLBACK_CATEGORIES;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -41,6 +57,12 @@ export const ImportExtratoModal: React.FC<ImportExtratoModalProps> = ({ isOpen, 
       }
       return t;
     }));
+  };
+
+  const handleCategoryChange = (id: string, category: string) => {
+    setPreview(prev => prev.map(t => (
+      t.id === id ? { ...t, category } : t
+    )));
   };
 
   const handleConfirm = async () => {
@@ -82,7 +104,7 @@ export const ImportExtratoModal: React.FC<ImportExtratoModalProps> = ({ isOpen, 
               <>
                 <UploadCloud size={48} className="upload-icon" />
                 <h3>Arraste o OFX ou PDF ou clique aqui</h3>
-                <p>Suporta arquivos OFX genéricos ou PDF do Itaú.</p>
+                <p>Suporta OFX e PDFs do Itaú ou Mercado Pago.</p>
               </>
             )}
           </div>
@@ -94,6 +116,9 @@ export const ImportExtratoModal: React.FC<ImportExtratoModalProps> = ({ isOpen, 
               <h4>Revisão de Lançamentos</h4>
               <p>Conta identificada: <strong>{accountGuess}</strong></p>
             </div>
+            <p className="preview-hint">
+              Ajuste a categoria dos itens novos antes de confirmar.
+            </p>
             
             <div className="preview-table-wrap">
               <table className="data-table">
@@ -102,12 +127,17 @@ export const ImportExtratoModal: React.FC<ImportExtratoModalProps> = ({ isOpen, 
                     <th>Ação</th>
                     <th>Data</th>
                     <th>Descrição</th>
+                    <th>Categoria</th>
                     <th>Valor</th>
                     <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {preview.map(t => (
+                  {preview.map(t => {
+                    const rowCategories = t.category && !categories.includes(t.category)
+                      ? [t.category, ...categories]
+                      : categories;
+                    return (
                     <tr key={t.id} className={`status-row status-${t.status.toLowerCase()}`}>
                       <td>
                         <button 
@@ -122,6 +152,19 @@ export const ImportExtratoModal: React.FC<ImportExtratoModalProps> = ({ isOpen, 
                       </td>
                       <td>{t.date}</td>
                       <td>{t.description}</td>
+                      <td>
+                        <select
+                          className="custom-select import-category-select"
+                          value={t.category || 'Outros'}
+                          onChange={(e) => handleCategoryChange(t.id, e.target.value)}
+                          disabled={t.status !== 'NEW'}
+                          aria-label={`Categoria de ${t.description}`}
+                        >
+                          {rowCategories.map(category => (
+                            <option key={category} value={category}>{category}</option>
+                          ))}
+                        </select>
+                      </td>
                       <td style={{ color: t.type === 'Receita' ? '#10b981' : '#ef4444' }}>
                         {t.type === 'Receita' ? '+' : '-'} R$ {t.amount.toFixed(2)}
                       </td>
@@ -131,7 +174,8 @@ export const ImportExtratoModal: React.FC<ImportExtratoModalProps> = ({ isOpen, 
                         {t.status === 'IGNORED' && <span className="badge badge-ignored">Ignorar</span>}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
