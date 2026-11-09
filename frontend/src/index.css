@@ -1666,11 +1666,33 @@ h2 {
   align-items: center;
 }
 
+.preview-hint {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: calc(var(--space-xs) * -1);
+}
+
 .preview-table-wrap {
   max-height: 400px;
   overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
+}
+
+.preview-table-wrap .data-table {
+  min-width: 760px;
+}
+
+.import-category-select {
+  min-width: 150px;
+  padding: 6px 8px;
+}
+
+.import-category-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .btn-status-toggle {
