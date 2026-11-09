@@ -88,5 +88,5 @@ O script é idempotente: depois de aplicar, uma nova execução não encontra ma
   propósito. Categorias editadas manualmente têm prioridade e não são tocadas.
 - O gráfico de Analytics consome `GET /api/analytics/summary`; a agregação fica
   no backend e exclui `Transferência interna`.
-- O preview de importação ainda não permite trocar a categoria sugerida; isso
-  fica para a evolução da UX de importação.
+- O preview de importação permite ajustar a categoria sugerida nos itens
+  `NEW` antes de confirmar; a sugestão automática continua conservadora.

@@ -205,6 +205,18 @@ Este documento centraliza as issues e o roadmap para guiar o desenvolvimento do 
 
 ---
 
+## 📌 Issue #17: Categoria Editável no Preview de Importação
+* **Labels:** `import`, `frontend`, `ux`
+* **Status:** ✅ Concluído
+* **Descrição:** A importação já sugeria categoria, mas não permitia corrigir antes de confirmar. O preview agora mostra a categoria de cada lançamento e permite trocá-la nos itens que serão adicionados.
+* **Tarefas:**
+  - [x] Adicionar coluna de categoria com seletor no preview de importação.
+  - [x] Carregar as categorias de `GET /api/options` e desabilitar o seletor para itens `MATCHED`/`IGNORED`.
+  - [x] Enviar a categoria editada em `POST /api/transactions/import/confirm`.
+  - [x] Teste garantindo que a categoria escolhida é persistida.
+
+---
+
 ## 🚀 Como Rodar no Linux:
 
 1. Subir o banco PostgreSQL:
