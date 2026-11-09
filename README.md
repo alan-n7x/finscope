@@ -60,20 +60,31 @@ docker compose up -d --build
 
 ## Desenvolvimento local
 
-```bash
-# banco
-docker compose up -d postgres
+O `docker-compose.yml` é o artefato de produção: imagem imutável, sem bind
+mount e sem reload. Para desenvolver, use o override `compose.dev.yaml`, que
+monta `./app` no container e roda o Uvicorn com `--reload`.
 
-# backend
+```bash
+# backend em Docker (reload) + frontend com Vite/HMR
+./scripts/dev.sh
+
+# ou manualmente:
+docker compose -f docker-compose.yml -f compose.dev.yaml up -d postgres backend
+cd frontend && npm install && npm run dev
+```
+
+- Backend: `http://localhost:8000` (salvar um `.py` reinicia o Uvicorn).
+- Frontend: `http://localhost:5173` (HMR; proxy `/api` → `:8000`).
+- Docs: `http://localhost:8000/docs`.
+
+Se preferir o backend fora do Docker, o banco continua no container:
+
+```bash
+docker compose up -d postgres
 uv sync
 uv run pytest
 uv run uvicorn app.main:app --reload   # http://localhost:8000
-
-# frontend (outro terminal)
-cd frontend && npm install && npm run dev  # http://localhost:5173 (proxy /api -> :8000)
 ```
-
-Documentação interativa: `http://localhost:8000/docs`.
 
 ## Como funciona a importação de extratos
 
