@@ -39,6 +39,10 @@
   --space-md: 16px;
   --space-lg: 24px;
   --space-xl: 32px;
+
+  /* Sidebar: rail compacto (ícones) x expandido (ícones + labels) */
+  --sidebar-width-collapsed: 64px;
+  --sidebar-width-expanded: 220px;
 }
 
 * {
@@ -990,39 +994,39 @@ h2 {
   top: 0;
   left: 0;
   height: 100vh;
-  width: 72px;
+  width: var(--sidebar-width-collapsed);
   background: rgba(15, 23, 42, 0.97);
   border-right: 1px solid var(--border-color);
   backdrop-filter: blur(16px);
   z-index: 50;
   padding: var(--space-md) var(--space-xs);
   gap: var(--space-sm);
-  overflow: hidden;
+  overflow: visible;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Collapsed rail: icons only. Hover must NOT expand (toggle owns the state),
    otherwise clicking the toggle while hovering shows no change. */
 .nav-sidebar:not(.nav-sidebar--expanded) .nav-brand {
-  gap: 4px;
-  padding: var(--space-xs) 4px;
+  justify-content: center;
+  gap: 0;
+  padding: var(--space-xs) 0;
 }
 
-/* Compact logo + toggle side by side in the 72px rail */
-.nav-sidebar:not(.nav-sidebar--expanded) .logo-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-}
-
-.nav-sidebar:not(.nav-sidebar--expanded) .logo-icon svg {
-  width: 15px;
-  height: 15px;
+/* No rail compacto o logo sai de cena para o toggle ficar centralizado. */
+.nav-sidebar:not(.nav-sidebar--expanded) .logo-icon,
+.nav-sidebar:not(.nav-sidebar--expanded) .nav-brand-label {
+  display: none;
 }
 
 .nav-sidebar:not(.nav-sidebar--expanded) .toggle-sidebar {
   margin-left: 0;
-  padding: 6px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .nav-brand {
@@ -1031,7 +1035,7 @@ h2 {
   gap: var(--space-sm);
   padding: var(--space-xs) 6px;
   margin-bottom: var(--space-sm);
-  overflow: hidden;
+  overflow: visible;
   white-space: nowrap;
 }
 
@@ -1064,9 +1068,10 @@ h2 {
   text-decoration: none;
   font-size: 0.85rem;
   font-weight: 600;
-  overflow: hidden;
+  overflow: visible;
   white-space: nowrap;
   flex-shrink: 0;
+  position: relative;
   transition: var(--transition);
 }
 
@@ -1093,7 +1098,7 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .nav-fab-sidebar {
@@ -1109,7 +1114,8 @@ h2 {
   font-size: 0.85rem;
   font-weight: 700;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
   transition: var(--transition);
 }
 
@@ -1126,7 +1132,60 @@ h2 {
   font-size: 0.72rem;
   color: var(--text-muted);
   white-space: nowrap;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+}
+
+/* ── Rail compacto: labels ocultas + ícones centralizados ── */
+.nav-sidebar:not(.nav-sidebar--expanded) .nav-item,
+.nav-sidebar:not(.nav-sidebar--expanded) .nav-fab-sidebar,
+.nav-sidebar:not(.nav-sidebar--expanded) .nav-status {
+  justify-content: center;
+  gap: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.nav-sidebar:not(.nav-sidebar--expanded) .nav-item-label {
+  display: none;
+}
+
+/* ── Tooltips do rail compacto (hover e foco por teclado) ── */
+.nav-sidebar:not(.nav-sidebar--expanded) [data-tooltip] {
+  position: relative;
+}
+
+.nav-sidebar:not(.nav-sidebar--expanded) [data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%) translateX(-4px);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: rgba(15, 23, 42, 0.98);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    visibility 0.15s;
+  z-index: 60;
+}
+
+.nav-sidebar:not(.nav-sidebar--expanded) [data-tooltip]:hover::after,
+.nav-sidebar:not(.nav-sidebar--expanded) [data-tooltip]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) translateX(0);
 }
 
 /* ── Main content ── */
@@ -1595,14 +1654,14 @@ h2 {
   }
 
   .shell-main {
-    margin-left: 72px;
+    margin-left: var(--sidebar-width-collapsed);
     padding-bottom: 0;
     transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* Shift content when sidebar is expanded so the fixed sidebar never overlays it */
   .shell:has(.nav-sidebar--expanded) .shell-main {
-    margin-left: 220px;
+    margin-left: var(--sidebar-width-expanded);
   }
 
   .page-content {
@@ -1769,12 +1828,28 @@ h2 {
   transform: translateY(-2px);
 }
 
+.toggle-sidebar:focus-visible,
+.nav-item:focus-visible,
+.nav-fab-sidebar:focus-visible {
+  outline: 2px solid var(--focus-ring-color);
+  outline-offset: 2px;
+}
+
 /* Sidebar expanded state */
 .nav-sidebar--expanded {
-  width: 220px;
+  width: var(--sidebar-width-expanded);
 }
 
 /* Keep hover transition smooth */
 .nav-sidebar {
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Acessibilidade: rail e tooltips sem animação com movimento reduzido */
+@media (prefers-reduced-motion: reduce) {
+  .nav-sidebar,
+  .shell-main,
+  .nav-sidebar:not(.nav-sidebar--expanded) [data-tooltip]::after {
+    transition: none;
+  }
 }

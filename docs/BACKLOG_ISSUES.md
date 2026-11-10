@@ -217,6 +217,19 @@ Este documento centraliza as issues e o roadmap para guiar o desenvolvimento do 
 
 ---
 
+## 📌 Issue #18: Sidebar Icon-Only (Barra Compacta)
+* **Labels:** `frontend`, `ux`, `accessibility`
+* **Status:** ✅ Concluído
+* **Descrição:** Ao colapsar, a sidebar deveria virar um rail compacto com os ícones visíveis e centralizados. O estado anterior escondia os textos, mas não garantia alinhamento, tooltips nem um toggle acessível nos dois estados.
+* **Tarefas:**
+  - [x] Reduzir o rail colapsado para 64px, mantendo Dashboard, Extrato, Analytics, Dívidas e Novo Lançamento visíveis.
+  - [x] Ocultar somente as labels e centralizar os ícones.
+  - [x] Adicionar tooltips no hover e no foco por teclado quando colapsada.
+  - [x] Manter o toggle fixo no topo com `aria-expanded`/`aria-controls`.
+  - [x] Ajustar a margem do conteúdo mantendo o layout mobile (bottom nav) inalterado.
+
+---
+
 ## 🚀 Como Rodar no Linux:
 
 1. Subir o banco PostgreSQL:

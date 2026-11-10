@@ -43,32 +43,41 @@ export const AppShell: React.FC = () => {
   return (
     <div className="shell">
       {/* ── Desktop/Tablet Sidebar ── */}
-      <aside className={`nav-sidebar ${!isSidebarCollapsed ? 'nav-sidebar--expanded' : ''}`}>
+      <aside
+        id="primary-sidebar"
+        className={`nav-sidebar ${!isSidebarCollapsed ? 'nav-sidebar--expanded' : ''}`}
+      >
         <div className="nav-brand">
           <div className="logo-icon">
             <Wallet size={20} />
           </div>
           <span className="nav-brand-label">Finscope</span>
           <button
+            type="button"
             className="toggle-sidebar"
             onClick={toggleSidebar}
             aria-label={isSidebarCollapsed ? 'Abrir menu lateral' : 'Fechar menu lateral'}
+            aria-expanded={!isSidebarCollapsed}
+            aria-controls="primary-sidebar"
+            data-tooltip={isSidebarCollapsed ? 'Abrir menu' : undefined}
           >
             {isSidebarCollapsed ? <Menu size={18} /> : <ChevronLeft size={18} />}
           </button>
         </div>
 
-          <nav className="nav-items">
+          <nav className="nav-items" aria-label="Navegação principal">
             {navItems.map(({ to, icon: Icon, label }) => (
               <NavLink
                 key={to}
                 to={to}
                 end={to === '/'}
+                aria-label={label}
+                data-tooltip={label}
                 className={({ isActive }) =>
                   `nav-item ${isActive ? 'nav-item--active' : ''}`
                 }
               >
-                <Icon size={20} />
+                <Icon size={20} aria-hidden="true" />
                 <span className="nav-item-label">{label}</span>
               </NavLink>
             ))}
@@ -76,14 +85,21 @@ export const AppShell: React.FC = () => {
 
           <div className="nav-footer">
             <button
+              type="button"
               className="nav-fab-sidebar"
               onClick={() => setIsModalOpen(true)}
+              aria-label="Novo Lançamento"
+              data-tooltip="Novo Lançamento"
             >
-              <Plus size={18} />
+              <Plus size={18} aria-hidden="true" />
               <span className="nav-item-label">Novo Lançamento</span>
             </button>
-            <div className="nav-status">
-              <Database size={14} />
+            <div
+              className="nav-status"
+              aria-label="PostgreSQL conectado"
+              data-tooltip="PostgreSQL"
+            >
+              <Database size={14} aria-hidden="true" />
               <span className="nav-item-label">PostgreSQL</span>
             </div>
           </div>
